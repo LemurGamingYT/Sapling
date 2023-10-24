@@ -1,0 +1,9 @@
+import "sapX"
+
+lexer = sapX.new_lexer('1 + 5')
+lexer.tok('INT', `\d+`)
+lexer.tok('ADD', `\+`)
+
+lexer.skip(`\s+`)
+
+print(lexer.tokenize())

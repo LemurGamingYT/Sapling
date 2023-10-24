@@ -1,0 +1,6 @@
+// Parameters of functions work like any other language
+func test(x, y, z) {
+    print(x + y + z)
+}
+
+test(5, 5, 5)

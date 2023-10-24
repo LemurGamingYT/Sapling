@@ -1,0 +1,6 @@
+// Define a function using the 'func' keyword
+func main() {
+    print('Hello world!')
+}
+
+main()

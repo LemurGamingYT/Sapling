@@ -1,0 +1,6 @@
+// Define a variable like a dynamic language
+x = 25
+y = 100
+
+print(x)
+print(y)

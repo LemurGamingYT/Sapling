@@ -1,0 +1,8 @@
+import "ai"
+
+model = ai.train(
+    {'Dear Sir, I am a prince in Nigeria', 'Hello, your order has been shipped'},
+    {'scam', 'not scam'}
+)
+
+print(model.predict({'Hello, your package has been shipped'}))
