@@ -30,7 +30,7 @@ file.func()
 ```
 import "pause" from "time"
 ```
-- **Repeat until**: Repeats a code block until a condition is met, like a white statement
+- **Repeat until**: Repeats a code block until a condition is met, like a while statement
 ```
 x = 10
 repeat {
