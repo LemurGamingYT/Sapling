@@ -23,7 +23,7 @@
   },
   {
    "optionDest": "name",
-   "value": "Sapling"
+   "value": "sapling"
   },
   {
    "optionDest": "upx_dir",
@@ -68,6 +68,10 @@
   {
    "optionDest": "datas",
    "value": "C:/Users/alex/Desktop/Programming/Python/Sapling/rply;rply/"
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/alex/Desktop/Programming/Python/Sapling/appdirs.py;."
   }
  ],
  "nonPyinstallerOptions": {
