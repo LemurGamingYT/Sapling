@@ -11,6 +11,7 @@ from re import compile as re_compile
 from sys import exit as sys_exit
 from contextlib import suppress
 from collections import deque
+from types import NoneType
 
 import sapling.codes as codes
 from sapling.error import (
@@ -142,6 +143,24 @@ class VM:
         return Array(instruction.line, instruction.column, [
             self.execute(value).value for value in instruction.value
         ])
+    
+    def _execute_arrcomp(self, instruction: codes.ArrayComp):
+        arr = self.execute(instruction.arr)
+        if arr.type != 'array':
+            return self.error(STypeError('Expected \'array\' for array comprehension',
+                [arr.line, arr.column]
+            ))
+
+        f = Func(instruction.line, instruction.column, '_arrcomp',
+            [Param(instruction.ident)], Body(instruction.expr.line, instruction.expr.column, [
+                codes.Return(instruction.expr.line, instruction.expr.column, instruction.expr)
+            ])
+        )
+        return Array(
+            arr.line,
+            arr.column,
+            map(lambda val: f(self, [Arg(val)]), arr.value)
+        )
 
     def _execute_call(self, instruction: codes.Call):
         func = self.execute(instruction.func)
@@ -154,25 +173,86 @@ class VM:
 
     def _execute_id(self, instruction: codes.Id):
         if self.env.get(instruction.value) is not None:
+            v = self.env[instruction.value]
+            if isinstance(self.env[instruction.value], Var):
+                v = v.value
+            
             with suppress(AttributeError):
                 self.env[instruction.value].line = instruction.line
                 self.env[instruction.value].column = instruction.column
             
-            return self.env[instruction.value]
+            return v
 
         self.error(SNameError(instruction.value, [instruction.line, instruction.column]))
 
     def _execute_assign(self, instruction: codes.Assign):
-        self.env[instruction.name.value] = self.execute(instruction.value)
-        return Nil(instruction.line, instruction.column)
+        if self.env.get(instruction.name.value) is not None:
+            if self.env.get(instruction.name.value).constant:
+                self.error(SRuntimeError(f'Cannot assign to constant \'{instruction.name.value}\'',
+                    [instruction.line, instruction.column]
+                ))
+            else:
+                self.env[instruction.name.value].value = self.execute(instruction.value)
+        
+        self.env[instruction.name.value] = Var(
+            instruction.line, instruction.column, instruction.name.value, self.execute(instruction.value),
+            instruction.constant
+        )
 
     def _execute_func(self, instruction: codes.FuncDef):
         name = instruction.name.value
         params = self.execute(instruction.params) if instruction.params else []
 
         self.env[name] = Func(instruction.line, instruction.column, name, params, instruction.body)
+    
+    def _execute_enum(self, instruction: codes.Enum):
+        enum = Class(
+            instruction.line,
+            instruction.column,
+            instruction.name,
+            {f'_{obj.name}': self.execute(obj.value) for obj in instruction.properties},
+        )
 
-        return Nil(instruction.line, instruction.column)
+        self.env[enum.name] = enum
+    
+    def _execute_struct(self, instruction: codes.Struct):
+        ln, col = instruction.line, instruction.column
+        init = Func(
+            ln,
+            col,
+            '_init',
+            [Param(field.name, field.type) for field in instruction.fields],
+            Body(ln, col, [
+                codes.SetSelf(field.line, field.column, field.name, codes.Id(
+                    field.line, field.column, field.name
+                ), instruction.name)
+                for field in instruction.fields
+            ])
+        )
+        
+        struct = Class(
+            ln,
+            col,
+            instruction.name,
+            {'_init': init},
+            lambda _: f'Struct \'{instruction.name}\'',
+            instruction.name
+        )
+        
+        self.env[struct.name] = struct
+    
+    def _execute_new(self, instruction: codes.New):
+        c = self.execute(instruction.name)
+        if c is None:
+            self.error(SNameError(instruction.name, [instruction.line, instruction.column]))
+        
+        if not isinstance(c, Class):
+            self.error(STypeError(f'Cannot instantiate \'{c.type}\'', [c.line, c.column]))
+        
+        if '_init' in c.objects:
+            c.objects['_init'](self, self.execute(instruction.args) if instruction.args else [])
+        
+        return c
 
     def _execute_if(self, instruction: codes.If):
         if self.execute(instruction.condition):
@@ -180,17 +260,12 @@ class VM:
         elif instruction.otherwise is not None:
             self.execute(instruction.otherwise)
 
-        return Nil(instruction.line, instruction.column)
-
     def _execute_while(self, instruction: codes.While):
         while self.execute(instruction.condition):
             self.execute(instruction.body)
-
-        return Nil(instruction.line, instruction.column)
     
     def _execute_import(self, instruction: codes.Import):
         self.import_module(instruction.name[1:-1])
-        return Nil(instruction.line, instruction.column)
     
     def _execute_return(self, instruction: codes.Return):
         return self.execute(instruction.value)
@@ -217,6 +292,20 @@ class VM:
             return getattr(base, attr)
         except AttributeError:
             self.error(SAttributeError(base.type, attr[1:], [base.line, base.column]))
+    
+    def _execute_setself(self, instruction: codes.SetSelf):
+        c = self.env.get(instruction.class_name)
+        if c is None:
+            self.error(SNameError(instruction.class_name, [instruction.line, instruction.column]))
+        
+        if not isinstance(c, Class):
+            self.error(STypeError(f'Cannot set \'{c.type}\' as self', [c.line, c.column]))
+
+        c.objects[f'_{instruction.name}'] = self.execute(instruction.value)
+    
+    def _no_handler(self, _):
+        # print(f'No handler for instruction {instruction}')
+        return None
 
     def execute(self, instruction):
         """
@@ -228,9 +317,6 @@ class VM:
         """
 
         handler = self.instruction_handlers.get(type(instruction))
-        if handler is None:
-            self.error(SRuntimeError(f'No handler for instruction {instruction}', self.loose_pos))
-
         return handler(self, instruction)
 
 
@@ -258,6 +344,12 @@ class VM:
         codes.Import: _execute_import,
         codes.Regex: _execute_regex,
         codes.Hex: _execute_hex,
+        codes.Enum: _execute_enum,
+        codes.ArrayComp: _execute_arrcomp,
+        codes.Struct: _execute_struct,
+        codes.New: _execute_new,
+        codes.SetSelf: _execute_setself,
+        NoneType: _no_handler
     }
 
 

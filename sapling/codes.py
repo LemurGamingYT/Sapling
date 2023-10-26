@@ -22,6 +22,8 @@ Hex = namedtuple('Hex', ['line', 'column', 'value'])
 Id = namedtuple('Id', ['line', 'column', 'value'])
 Nil = namedtuple('Nil', ['line', 'column'])
 
+ArrayComp = namedtuple('ArrayComp', ['line', 'column', 'expr', 'ident', 'arr'])
+
 Call = namedtuple('Call', ['line', 'column', 'func', 'args'])
 BinaryOp = namedtuple('BinaryOp', ['line', 'column', 'op', 'left', 'right'])
 UnaryOp = namedtuple('UnaryOp', ['line', 'column', 'op', 'expr'])
@@ -33,12 +35,15 @@ Arg = namedtuple('Arg', ['line', 'column', 'value'])
 Params = namedtuple('Params', ['line', 'column', 'params'])
 Param = namedtuple('Param', ['line', 'column', 'name', 'annotation', 'default'])
 
-Assign = namedtuple('Assign', ['line', 'column', 'name', 'value'])
+Assign = namedtuple('Assign', ['line', 'column', 'name', 'value', 'constant'])
 FuncDef = namedtuple('FuncDef', ['line', 'column', 'name', 'params', 'body'])
 Struct = namedtuple('Struct', ['line', 'column', 'name', 'fields'])
 Enum = namedtuple('Enum', ['line', 'column', 'name', 'properties'])
 
-StructDefinition = namedtuple('StructDefinitions', ['line', 'column', 'name', 'value', 'type'])
+New = namedtuple('New', ['line', 'column', 'name', 'args'])
+SetSelf = namedtuple('SetSelf', ['line', 'column', 'name', 'value', 'class_name'])
+
+StructDefinition = namedtuple('StructDefinitions', ['line', 'column', 'name', 'type'])
 EnumDefinition = namedtuple('EnumDefinitions', ['line', 'column', 'name', 'value'])
 
 If = namedtuple('If', ['line', 'column', 'condition', 'then', 'otherwise'])

@@ -3,10 +3,7 @@ from rply.utils import iteritems
 
 
 def rightmost_terminal(symbols, terminals):
-    for sym in reversed(symbols):
-        if sym in terminals:
-            return sym
-    return None
+    return next((sym for sym in reversed(symbols) if sym in terminals), None)
 
 
 class Grammar(object):
@@ -18,7 +15,7 @@ class Grammar(object):
         self.prod_names = {}
         # A dictionary mapping the names of terminals to a list of the rules
         # where they are used
-        self.terminals = dict((t, []) for t in terminals)
+        self.terminals = {t: [] for t in terminals}
         self.terminals["error"] = []
         # A dictionary mapping names of nonterminals to a list of rule numbers
         # where they are used
@@ -38,10 +35,10 @@ class Grammar(object):
         else:
             try:
                 prod_prec = self.precedence[precedence]
-            except KeyError:
+            except KeyError as e:
                 raise ParserGeneratorError(
                     "Precedence %r doesn't exist" % precedence
-                )
+                ) from e
 
         pnumber = len(self.productions)
         self.nonterminals.setdefault(prod_name, [])
@@ -59,14 +56,10 @@ class Grammar(object):
 
     def set_precedence(self, term, assoc, level):
         if term in self.precedence:
-            raise ParserGeneratorError(
-                "Precedence already specified for %s" % term
-            )
+            raise ParserGeneratorError(f"Precedence already specified for {term}")
         if assoc not in ["left", "right", "nonassoc"]:
             raise ParserGeneratorError(
-                "Precedence must be one of left, right, nonassoc; not %s" % (
-                    assoc
-                )
+                f"Precedence must be one of left, right, nonassoc; not {assoc}"
             )
         self.precedence[term] = (assoc, level)
 
@@ -123,9 +116,8 @@ class Grammar(object):
             for f in self.first[x]:
                 if f == "<empty>":
                     x_produces_empty = True
-                else:
-                    if f not in result:
-                        result.append(f)
+                elif f not in result:
+                    result.append(f)
             if not x_produces_empty:
                 break
         else:
@@ -198,7 +190,7 @@ class Production(object):
         self.reduced = 0
 
     def __repr__(self):
-        return "Production(%s -> %s)" % (self.name, " ".join(self.prod))
+        return f'Production({self.name} -> {" ".join(self.prod)})'
 
     def getlength(self):
         return len(self.prod)
@@ -217,7 +209,7 @@ class LRItem(object):
         self.lr_after = after
 
     def __repr__(self):
-        return "LRItem(%s -> %s)" % (self.name, " ".join(self.prod))
+        return f'LRItem({self.name} -> {" ".join(self.prod)})'
 
     def getlength(self):
         return len(self.prod)

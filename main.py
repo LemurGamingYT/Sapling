@@ -74,7 +74,7 @@ def run_vm(bytecode: Code, src: str):
 
 if __name__ == '__main__':
     arg_parser = ArgumentParser(description='Sapling bytecode VM')
-    arg_parser.add_argument('file', type=Path, help='The file to run')
+    arg_parser.add_argument('file', type=Path, help='The file (or directory) to run')
     arg_parser.add_argument('-c', '--compile', action='store_true',
                             help='Compile the bytecode to file')
     arg_parser.add_argument('-t', '--time', action='store_true',
@@ -87,6 +87,11 @@ if __name__ == '__main__':
 
     if args.run_tests:
         for f in Path('examples').rglob('*.sap'):
+            print(f'Running {f.as_posix()}')
+            bytecode, src = main(Namespace(file=f, compile=args.compile))
+            run_vm(bytecode, src)
+    elif args.file.is_dir():
+        for f in args.file.rglob('*.sap'):
             print(f'Running {f.as_posix()}')
             bytecode, src = main(Namespace(file=f, compile=args.compile))
             run_vm(bytecode, src)

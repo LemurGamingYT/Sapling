@@ -4,8 +4,9 @@ from rply import LexerGenerator, LexingError
 from rply.lexer import LexerStream
 from rply.token import Token
 
+from sapling.objects import Regex, String, Nil, Class, Func
 from sapling.std.call_decorator import call_decorator
-from sapling.objects import Regex, String, Nil, Class
+from sapling.vmutils import Param
 from sapling.error import SError
 
 
@@ -51,6 +52,9 @@ class tokens:
 class lexer:
     __name__ = 'lexer'
     type = 'lexer'
+    
+    def repr(self, _) -> str:
+        return f'lexer(src: {self.src})'
     
     def __init__(self, src: str):
         self.lg = LexerGenerator()

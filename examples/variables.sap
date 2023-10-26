@@ -4,3 +4,8 @@ y = 100
 
 print(x)
 print(y)
+
+// Variables can also be a constant value
+const z = 10000
+print(z)
+// z = 10 // RuntimeError: Cannot assign to constant 'z'

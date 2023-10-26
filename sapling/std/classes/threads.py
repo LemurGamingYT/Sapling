@@ -1,5 +1,5 @@
 from threading import Thread, active_count, current_thread, main_thread
-from sapling.objects import Int, Class, Func, Nil, Array
+from sapling.objects import Int, Class, Func, Nil, Array, String
 from sapling.std.call_decorator import call_decorator
 
 
@@ -36,6 +36,10 @@ class threads:
     def _main(self, vm):
         return Class.from_py_cls(thread(main_thread()), *vm.loose_pos)
     
-    @call_decorator({'f': {'type': 'func'}, 'args': {'type': 'array', 'default': (Array, [])}})
-    def _new(self, vm, f: Func) -> Nil:
-        return Class.from_py_cls(thread(target=f, args=(vm, [],)), f.line, f.column)
+    @call_decorator({
+        'f': {'type': 'func'},
+        'args': {'type': 'array', 'default': (Array, [])},
+        'name': {'type': 'string', 'default': (String, '')},
+    })
+    def _thread(self, vm, f: Func, args: Array, name: String | Nil) -> Class:
+        return Class.from_py_cls(thread(target=f, args=(vm, args.value), name=name.value), f.line, f.column)

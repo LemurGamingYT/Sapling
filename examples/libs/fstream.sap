@@ -1,0 +1,11 @@
+// Import fstream
+import "fstream"
+
+// Open the file
+f = fstream.open('test.txt')
+print(f)
+
+// Explore the attributes of the file class
+print(f.name)
+print(f.suffix)
+print(f.path)

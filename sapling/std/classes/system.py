@@ -1,4 +1,4 @@
-from platform import architecture, machine, node, platform, processor, release, system, version
+from platform import architecture, machine, node, platform, processor, release, version
 from os import getcwd, getenv, putenv, unsetenv, cpu_count, system as shell
 
 from pyautogui import leftClick, rightClick, middleClick, keyDown, keyUp, moveTo
@@ -86,9 +86,9 @@ class system:
     def _release(self, vm) -> String:
         return String(*vm.loose_pos, release())
     
-    @call_decorator()
-    def _system(self, vm) -> String:
-        return String(*vm.loose_pos, system())
+    @call_decorator({'cmd': {'type': 'string'}}, req_vm=False)
+    def _shell(self, cmd: String) -> String:
+        return String(cmd.line, cmd.column, shell(cmd.value))
     
     @call_decorator()
     def _version(self, vm) -> String:

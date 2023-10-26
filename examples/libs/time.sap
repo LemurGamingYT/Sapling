@@ -1,0 +1,20 @@
+// Import time
+import "time"
+
+
+// Create a function to test
+func test_time() {
+    i = 0
+    while i < 100000 {
+        i = i + 1
+    }
+}
+
+// Time the function and print it out
+print(time.time_function(test_time))
+
+// Pause the execution of the program for 2 seconds
+print(time.pause(2))
+
+// Print the current time
+print(time.current_time())

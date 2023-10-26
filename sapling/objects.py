@@ -6,9 +6,9 @@ Contains all the object classes used by the VM
 
 """
 
+from typing import Callable, Self, Iterable, AnyStr
 from pickle import HIGHEST_PROTOCOL, dumps, loads
 from re import Pattern, compile as re_compile
-from typing import Callable, Self, Iterable
 from dataclasses import dataclass, field
 
 from sapling.std.call_decorator import call_decorator, verify_params
@@ -495,7 +495,7 @@ class Bool(Node):
 class Nil(Node):
     """Used to represent None/null/nil in Sapling"""
 
-    value = None
+    value: any = field(default=None)
     type = 'nil'
 
     def repr(self, _) -> str:
@@ -510,7 +510,7 @@ class Nil(Node):
 class Regex(Node):
     """Used to represent and store a regular expression in Sapling"""
 
-    value: Pattern
+    value: Pattern[AnyStr]
 
     type = 'regex'
 
@@ -734,6 +734,15 @@ class Dictionary(Node):
     
     def __hash__(self):
         return hash(tuple(self.value.items()))
+
+
+@dataclass
+class Var(Node):
+    """Used to represent a variable in Sapling"""
+    
+    name: str
+    value: Node
+    constant: bool = field(default=False)
 
 
 @dataclass(unsafe_hash=True)

@@ -18,7 +18,7 @@ from sapling.constants import TOKENS, PRECEDENCE
 from sapling.codes import (
     Code, Assign, FuncDef, If, While, Body, Arg, Args, Param, Params, Id, Int, String, Bool,
     Nil, BinaryOp, Float, Array, Attribute, Call, UnaryOp, Continue, Import, Break, Return,
-    Regex, Hex, Struct, Enum, EnumDefinition, StructDefinition,
+    Regex, Hex, Struct, Enum, EnumDefinition, StructDefinition, ArrayComp, New
 )
 
 
@@ -108,7 +108,20 @@ def assign(p) -> Assign:
         Assign: The assignment bytecode object
     """
 
-    return Assign(*get_pos(p[0]), p[0], p[2])
+    return Assign(*get_pos(p[0]), p[0], p[2], False)
+
+@pg.production('stmt : Const Id = expr')
+def const_assign(p) -> Assign:
+    """Handle variable assignment with a constant value
+
+    Args:
+        p (list): The list of tokens provided by RPLY
+
+    Returns:
+        Assign: The assignment bytecode object
+    """
+    
+    return Assign(*get_pos(p[0]), p[1], p[3], True)
 
 @pg.production('stmt : Func Id ( ) body')
 @pg.production('stmt : Func Id ( params ) body')
@@ -126,7 +139,7 @@ def func_def(p) -> FuncDef:
         *get_pos(p[0]),
         Id(*get_pos(p[1]), p[1].getstr()),
         p[3] if len(p) == 6 else [],
-        p[4] if len(p) == 5 else p[5]
+        p[5] if len(p) == 6 else p[4]
     )
 
 @pg.production('stmt : If expr body')
@@ -262,7 +275,7 @@ def struct_defs(p) -> list:
     return [p[0]] if len(p) == 1 else p[0] + [p[1]]
 
 
-@pg.production('struct_def : Id Id = expr')
+@pg.production('struct_def : Id Id')
 def struct_def(p) -> StructDefinition:
     """Handles a struct definition
 
@@ -273,7 +286,7 @@ def struct_def(p) -> StructDefinition:
         StructDefinition: The Struct bytecode object
     """
 
-    return StructDefinition(*get_pos(p[0]), p[0].getstr(), p[1].getstr(), p[3])
+    return StructDefinition(*get_pos(p[0]), p[1].getstr(), p[0].getstr())
 
 
 @pg.production('enum_defs : enum_def')
@@ -551,6 +564,33 @@ def attr(p) -> Attribute:
     """
 
     return Attribute(*get_pos(p[0]), p[0], f'_{p[2].getstr()}')
+
+@pg.production('expr : New expr ( )')
+@pg.production('expr : New expr ( args )')
+def new(p) -> New:
+    """Handles advanced object creation
+
+    Args:
+        p (list): The list of tokens provided by RPLY
+
+    Returns:
+        New: The New bytecode object
+    """
+    
+    return New(*get_pos(p[0]), p[1], p[3] if len(p) == 5 else [])
+
+@pg.production('expr : { expr : Id <- expr }')
+def array_comp(p) -> ArrayComp:
+    """Handles array comprehension
+
+    Args:
+        p (list): The list of tokens provided by RPLY
+
+    Returns:
+        ArrayComp: The ArrayComp bytecode object
+    """
+
+    return ArrayComp(*get_pos(p[0]), p[1], p[3].getstr(), p[5])
 
 
 def parse(tokens: LexerStream) -> Code:

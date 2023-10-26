@@ -34,10 +34,16 @@ def verify_params(vm, args: list[Arg], params: dict | list) -> list:
     if len(new_args) < len(params):
         for param in params.values() if isinstance(params, dict) else params:
             if param.default is not None:
-                if isinstance(param, tuple):
-                    new_args.append(param[0](*vm.loose_pos, param[1]))
+                if isinstance(param.default, tuple):
+                    new_args.append(param.default[0](*vm.loose_pos, param.default[1]))
                 else:
                     new_args.append(param.default)
+    
+    if len(new_args) < len(params) or len(new_args) > len(params):
+        vm.error(STypeError(f'Expected {len(params)} arguments, got {len(new_args)}', [
+            args[0].value.line,
+            args[0].value.column
+        ]))
     
     return new_args
 

@@ -1,0 +1,15 @@
+// Import sapX
+import "sapX"
+
+// Create the lexer
+lexer = sapX.lexer('1 + 5')
+
+// Add token patterns to the lexer
+lexer.tok('INT', `\d+`)
+lexer.tok('ADD', `\+`)
+
+// Add a skip pattern to the lexer
+lexer.skip(`\s+`)
+
+// Tokenize the source
+print(lexer.tokenize())

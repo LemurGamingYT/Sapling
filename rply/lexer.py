@@ -27,36 +27,29 @@ class LexerStream(object):
         self.idx = match.end
         self._lineno += self.s.count("\n", match.start, match.end)
         last_nl = self.s.rfind("\n", 0, match.start)
-        if last_nl < 0:
-            return match.start + 1
-        else:
-            return match.start - last_nl
+        return match.start + 1 if last_nl < 0 else match.start - last_nl
 
     def next(self):
         while True:
             if self.idx >= len(self.s):
                 raise StopIteration
             for rule in self.lexer.ignore_rules:
-                match = rule.matches(self.s, self.idx)
-                if match:
+                if match := rule.matches(self.s, self.idx):
                     self._update_pos(match)
                     break
             else:
                 break
 
         for rule in self.lexer.rules:
-            match = rule.matches(self.s, self.idx)
-            if match:
+            if match := rule.matches(self.s, self.idx):
                 lineno = self._lineno
                 self._colno = self._update_pos(match)
                 source_pos = SourcePosition(match.start, lineno, self._colno)
-                token = Token(
-                    rule.name, self.s[match.start:match.end], source_pos
+                return Token(
+                    rule.name, self.s[match.start : match.end], source_pos
                 )
-                return token
-        else:
-            raise LexingError(None, SourcePosition(
-                self.idx, self._lineno, self._colno))
+        raise LexingError(None, SourcePosition(
+            self.idx, self._lineno, self._colno))
 
     def __next__(self):
         return self.next()

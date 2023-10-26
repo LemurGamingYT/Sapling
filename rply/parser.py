@@ -33,8 +33,8 @@ class LRParser(object):
                     except StopIteration:
                         lookahead = None
 
-                if lookahead is None:
-                    lookahead = Token("$end", "$end")
+            if lookahead is None:
+                lookahead = Token("$end", "$end")
 
             ltype = lookahead.gettokentype()
             if ltype in self.lr_table.lr_action[current_state]:
@@ -44,25 +44,21 @@ class LRParser(object):
                     current_state = t
                     symstack.append(lookahead)
                     lookahead = None
-                    continue
                 elif t < 0:
                     current_state = self._reduce_production(
                         t, symstack, statestack, state
                     )
                     continue
                 else:
-                    n = symstack[-1]
-                    return n
-            else:
-                # TODO: actual error handling here
-                if self.error_handler is not None:
-                    if state is None:
-                        self.error_handler(lookahead)
-                    else:
-                        self.error_handler(state, lookahead)
-                    raise AssertionError("For now, error_handler must raise.")
+                    return symstack[-1]
+            elif self.error_handler is not None:
+                if state is None:
+                    self.error_handler(lookahead)
                 else:
-                    raise ParsingError(None, lookahead.getsourcepos())
+                    self.error_handler(state, lookahead)
+                raise AssertionError("For now, error_handler must raise.")
+            else:
+                raise ParsingError(None, lookahead.getsourcepos())
 
     def _reduce_production(self, t, symstack, statestack, state):
         # reduce a symbol on the stack and emit a production
@@ -76,10 +72,7 @@ class LRParser(object):
         assert start >= 0
         del symstack[start:]
         del statestack[start:]
-        if state is None:
-            value = p.func(targ)
-        else:
-            value = p.func(state, targ)
+        value = p.func(targ) if state is None else p.func(state, targ)
         symstack.append(value)
         current_state = self.lr_table.lr_goto[statestack[-1]][pname]
         statestack.append(current_state)

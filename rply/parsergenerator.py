@@ -181,9 +181,7 @@ class ParserGenerator(object):
             cache_dir = AppDirs("rply").user_cache_dir
             cache_file = os.path.join(
                 cache_dir,
-                "%s-%s-%s.json" % (
-                    self.cache_id, self.VERSION, self.compute_grammar_hash(g)
-                )
+                f"{self.cache_id}-{self.VERSION}-{self.compute_grammar_hash(g)}.json",
             )
 
             if os.path.exists(cache_file):
@@ -323,7 +321,7 @@ class LRTable(object):
                             if a in st_action:
                                 r = st_action[a]
                                 if r > 0:
-                                    sprec, slevel = grammar.productions[st_actionp[a].number].prec
+                                    _, slevel = grammar.productions[st_actionp[a].number].prec
                                     rprec, rlevel = grammar.precedence.get(a, ("right", 0))
                                     if (slevel < rlevel) or (slevel == rlevel and rprec == "left"):
                                         st_action[a] = -p.number
@@ -331,7 +329,7 @@ class LRTable(object):
                                         if not slevel and not rlevel:
                                             sr_conflicts.append((st, repr(a), "reduce"))
                                         grammar.productions[p.number].reduced += 1
-                                    elif not (slevel == rlevel and rprec == "nonassoc"):
+                                    elif slevel != rlevel or rprec != "nonassoc":
                                         if not rlevel:
                                             sr_conflicts.append((st, repr(a), "shift"))
                                 elif r < 0:
@@ -373,7 +371,7 @@ class LRTable(object):
                                         st_actionp[a] = p
                                         if not rlevel:
                                             sr_conflicts.append((st, repr(a), "shift"))
-                                    elif not (slevel == rlevel and rprec == "nonassoc"):
+                                    elif slevel != rlevel or rprec != "nonassoc":
                                         if not slevel and not rlevel:
                                             sr_conflicts.append((st, repr(a), "reduce"))
                                 else:

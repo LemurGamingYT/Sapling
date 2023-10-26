@@ -6,13 +6,13 @@ print(math.round(5.6))
 // Create a function to run a thread on
 func thread_test() {
     i = 0
-    while i < 10000 {
+    while i < 1000000 {
         i = i + 1
     }
 
     print('Thread finished')
 }
 
-t = threads.new(thread_test)
+t = threads.thread(thread_test)
 print(t)
 t.run()
