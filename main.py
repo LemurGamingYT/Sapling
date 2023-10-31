@@ -5,9 +5,14 @@ sapling.py
 A bytecode VM written in Python 3.12.0
 """
 
+from sys import exit as sys_exit, version_info
+
+if version_info.major < 3 and version_info.minor < 12 or version_info.major < 3:
+    print('This program requires Python 3.12.0')
+    sys_exit(1)
+
 from pickle import loads, dumps, HIGHEST_PROTOCOL
 from argparse import ArgumentParser, Namespace
-from sys import exit as sys_exit
 from time import perf_counter
 from pathlib import Path
 
@@ -87,11 +92,6 @@ if __name__ == '__main__':
 
     if args.run_tests:
         for f in Path('examples').rglob('*.sap'):
-            print(f'Running {f.as_posix()}')
-            bytecode, src = main(Namespace(file=f, compile=args.compile))
-            run_vm(bytecode, src)
-    elif args.file.is_dir():
-        for f in args.file.rglob('*.sap'):
             print(f'Running {f.as_posix()}')
             bytecode, src = main(Namespace(file=f, compile=args.compile))
             run_vm(bytecode, src)

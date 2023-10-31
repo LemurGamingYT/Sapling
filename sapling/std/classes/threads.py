@@ -1,6 +1,6 @@
-from threading import Thread, active_count, current_thread, main_thread
 from sapling.objects import Int, Class, Func, Nil, Array, String
 from sapling.std.call_decorator import call_decorator
+from threading import Thread, active_count
 
 
 class thread:
@@ -27,14 +27,6 @@ class threads:
     @call_decorator()
     def _active(self, vm):
         return Int(active_count(), *vm.loose_pos)
-    
-    @call_decorator()
-    def _current(self, vm):
-        return Class.from_py_cls(thread(current_thread()), *vm.loose_pos)
-    
-    @call_decorator()
-    def _main(self, vm):
-        return Class.from_py_cls(thread(main_thread()), *vm.loose_pos)
     
     @call_decorator({
         'f': {'type': 'func'},

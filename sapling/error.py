@@ -58,6 +58,19 @@ class STypeError(SError):
         sys_exit(1)
 
 
+class SIndexError(SError):
+    """The index error class used when an index is out of range or a key is not found"""
+
+    def __init__(self, msg: str, pos: list):
+        self.msg = msg
+
+        self.pos = pos
+
+    def report(self):
+        print(f'IndexError: {self.msg}')
+        sys_exit(1)
+
+
 class SImportError(SError):
     """The import error class used when a library is not found or is invalid"""
 

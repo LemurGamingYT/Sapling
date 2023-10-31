@@ -1,5 +1,8 @@
-from sapling.std.call_decorator import call_decorator
 from sapling.objects import String, Class, Array, Nil
+from sapling.std.call_decorator import call_decorator
+from sapling.error import SFileError, STypeError
+
+from zlib import compress, decompress
 from pathlib import Path
 
 
@@ -51,6 +54,20 @@ class file:
         self.p.write_text(content.value, 'utf-8')
         return Nil(*self.pos)
     
+    @call_decorator(req_vm=False)
+    def _create(self):
+        if not self.p.exists():
+            self.p.touch()
+        
+        return Nil(*self.pos)
+
+    @call_decorator(req_vm=False)
+    def _remove(self):
+        if self.p.exists():
+            self.p.unlink()
+        
+        return Nil(*self.pos)
+    
     # @call_decorator({'contents': {'type': 'string'}}, req_vm=False)
     # def _append(self, content: String):
     #     with open(self.p.as_posix(), 'a') as fp:
@@ -65,3 +82,29 @@ class fstream:
     @call_decorator({'file': {'type': 'string'}})
     def _open(self, vm, f: String):
         return Class.from_py_cls(file(Path(f.value), vm), f.line, f.column)
+    
+    @call_decorator({'file': {'type': 'string'}})
+    def _compress(self, vm, f: String):
+        l = [f.line, f.column]
+        f: Path = Path(f.value)
+        if f.is_file():
+            f.write_bytes(compress(f.read_bytes()))
+        elif not f.exists():
+            vm.error(SFileError(f.as_posix(), l))
+        elif not f.is_dir():
+            vm.error(STypeError('Expected a file but got a directory', l))
+        
+        return Nil(*l)
+    
+    @call_decorator({'file': {'type': 'string'}})
+    def _decompress(self, vm, f: String):
+        l = [f.line, f.column]
+        f: Path = Path(f.value)
+        if f.is_file():
+            f.write_bytes(decompress(f.read_bytes()))
+        elif not f.exists():
+            vm.error(SFileError(f.as_posix(), l))
+        elif not f.is_dir():
+            vm.error(STypeError('Expected a file but got a directory', l))
+        
+        return Nil(*l)

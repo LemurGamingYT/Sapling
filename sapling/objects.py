@@ -87,6 +87,9 @@ class Int(Node):
     def __truediv__(self, other):
         match other.type:
             case 'int':
+                if other.value == 0:
+                    raise ZeroDivisionError
+                
                 return Float(self.line, self.column, self.value / other.value)
             case 'float':
                 return Float(self.line, self.column, self.value / other.value)
@@ -354,6 +357,12 @@ class String(Node):
 
     def __len__(self) -> int:
         return len(self.value)
+    
+    def __getitem__(self, i):
+        if i.value >= len(self.value):
+            raise IndexError()
+        
+        return String(self.line, self.column, self.value[i.value])
 
 
 @dataclass(unsafe_hash=True)
@@ -453,6 +462,12 @@ class StrBytes(String):
 
     def __len__(self) -> int:
         return len(self.value)
+    
+    def __getitem__(self, i):
+        if i.value >= len(self.value):
+            raise IndexError()
+        
+        return StrBytes(self.line, self.column, self.value[i.value])
 
 
 @dataclass(unsafe_hash=True)
@@ -569,6 +584,12 @@ class Regex(Node):
 
     def __len__(self) -> int:
         return len(self.value.pattern)
+    
+    def __getitem__(self, i):
+        if i.value >= len(self.value):
+            raise IndexError()
+        
+        return Regex(self.line, self.column, self.value.pattern[i.value])
 
 
 @dataclass
@@ -596,9 +617,9 @@ class Array(Node):
             Self: The generated array
         """
 
-        return Array(line, column, [
-            py_to_sap(value, line, column) for value in py_list
-        ])
+        return Array(line, column, list(map(lambda v:
+            py_to_sap(v, line, column), py_list))
+        )
 
     def to_py_list(self) -> list:
         """Converts this Sapling Array into a python list
@@ -607,7 +628,7 @@ class Array(Node):
             list: The Sapling Array as a python list
         """
 
-        return [sap_to_py(value) for value in self.value]
+        return list(map(lambda v: sap_to_py(v), self.value))
 
 
     @call_decorator({'index': {'type': 'int'}}, req_vm=False)
@@ -672,6 +693,12 @@ class Array(Node):
 
     def __len__(self) -> int:
         return len(self.value)
+    
+    def __getitem__(self, i):
+        if i.value >= len(self.value):
+            raise IndexError()
+        
+        return self.value[i.value]
 
 
 @dataclass
@@ -734,6 +761,12 @@ class Dictionary(Node):
     
     def __hash__(self):
         return hash(tuple(self.value.items()))
+    
+    def __getitem__(self, key):
+        if key.value not in self.value:
+            raise KeyError()
+        
+        return self.value[key.value]
 
 
 @dataclass
@@ -767,6 +800,11 @@ class Func(Node):
     @property
     def _is_builtin(self) -> Bool:
         return Bool(self.line, self.column, self.func is not None)
+    
+    
+    @call_decorator({'args': {'type': 'array', 'default': (Array, [])}})
+    def _call(self, vm, args: Array) -> Node:
+        return self(vm, args.value)
 
 
     def __call__(self, vm, args):

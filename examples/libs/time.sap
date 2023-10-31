@@ -14,7 +14,7 @@ func test_time() {
 print(time.time_function(test_time))
 
 // Pause the execution of the program for 2 seconds
-print(time.pause(2))
+time.pause(2)
 
 // Print the current time
 print(time.current_time())

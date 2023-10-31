@@ -6,6 +6,6 @@ class py:
     type = 'py'
     
     @call_decorator({'code': {'type': 'string'}}, req_vm=False)
-    def _exec(self, code: String) -> Nil:
+    def _execute(self, code: String) -> Nil:
         exec(code.value)
         return Nil(code.line, code.column)

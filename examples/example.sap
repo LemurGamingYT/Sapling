@@ -1,0 +1,89 @@
+// Define comments using '//'
+
+// Define variables like any other dynamic language
+x = 20
+y: int = 50 // y can only be an integer
+
+// Print out the variable
+print(x)
+
+// Call attributes
+print("HELLO".lower())
+print(y.to_hex())
+
+// Create an array comprehension
+z = {i : i <- range(0, 20)} // Use the range function to get all numbers from 0 - 19
+print(z)
+
+// Define a function
+func test() {
+    print("Hello world!")
+}
+
+test()
+
+// Define a function that uses the '+' operator
+func test2(a: int, b: int) {
+    return a + b
+}
+
+print(test2(50, 25))
+
+// Define an enum
+enum State {
+    SHOP = 1
+    GAME = 2
+}
+
+print(State.SHOP)
+print(State.GAME)
+
+// Define a struct
+struct Vector3 {
+    int x
+    int y
+    int z
+}
+
+// Create a new Vector3 struct
+vec = new Vector3(52, 91, 77)
+print(vec.x)
+print(vec.y)
+print(vec.z)
+
+// Perform mathematical functions
+print(math.sine(10))
+print(math.cosine(270))
+print(math.round(5.6))
+
+// Create a function to run a thread on
+func thread_test() {
+    i = 0
+    while i < 1000000 {
+        i = i + 1
+    }
+
+    print('Thread finished')
+}
+
+t = threads.thread(thread_test)
+print(t)
+t.run()
+
+// Import the knock http library
+import "knock"
+
+// Make a request to https://www.google.com
+print(knock.knock("https://www.google.com"))
+
+// Import fstream
+import "fstream"
+
+// Open the file
+f = fstream.open('test.txt')
+print(f)
+
+// Explore the attributes of the file class
+print(f.name)
+print(f.suffix)
+print(f.path)

@@ -15,7 +15,7 @@ from types import NoneType
 
 import sapling.codes as codes
 from sapling.error import (
-    STypeError, SRuntimeError, SImportError, SNameError, SError, SAttributeError
+    STypeError, SRuntimeError, SImportError, SNameError, SError, SAttributeError, SIndexError
 )
 from sapling.std import public_funcs, public_classes, public_libs
 from sapling.vmutils import Caller, Arg
@@ -56,9 +56,9 @@ class VM:
             name (str): Module/Library name
         """
 
-        l = public_libs.get(name)
+        l = public_libs.get(name[1:-1])
         if l is not None:
-            self.env[name] = Lib.from_py(l, *self.loose_pos)
+            self.env[name[1:-1]] = Lib.from_py(l, *self.loose_pos)
         else:
             self.error(SImportError(name, self.loose_pos))
 
@@ -102,47 +102,46 @@ class VM:
             if isinstance(stmt, (codes.Break, codes.Return, codes.Continue)):
                 return out
 
-    def _execute_args(self, instruction: codes.Args):
-        return [self.execute(arg) for arg in instruction.args]
-
-    def _execute_arg(self, instruction: codes.Arg):
-        return Arg(self.execute(instruction.value))
-
-    def _execute_params(self, instruction: codes.Params):
-        return [self.execute(param) for param in instruction.params]
-
-    def _execute_param(self, instruction: codes.Param):
-        return Param(
-            instruction.name,
-            instruction.annotation,
-            self.execute(instruction.default)
+    _execute_args = lambda self, instruction: [self.execute(arg) for arg in instruction.args]
+    _execute_arg = lambda self, instruction: Arg(self.execute(instruction.value))
+    
+    _execute_params = lambda self, instruction: [self.execute(param) for param in instruction.params]
+    _execute_param = lambda self, instruction: Param(
+        instruction.name,
+        instruction.annotation,
+        self.execute(instruction.default)
+    )
+    
+    _execute_nil = lambda _, instruction: Nil(instruction.line, instruction.column)
+    _execute_bool = lambda _, instruction: Bool(
+        instruction.line, instruction.column, instruction.value
+    )
+    _execute_string = lambda _, instruction: String(
+        instruction.line, instruction.column, instruction.value
+    )
+    _execute_regex = lambda _, instruction: Regex(
+        instruction.line, instruction.column, re_compile(instruction.value)
+    )
+    _execute_hex = lambda _, instruction: Hex(
+        instruction.line, instruction.column, instruction.value
+    )
+    _execute_int = lambda _, instruction: Int(
+        instruction.line, instruction.column, instruction.value
+    )
+    _execute_float = lambda _, instruction: Float(
+        instruction.line, instruction.column, instruction.value
+    )
+    _execute_array = lambda self, instruction: Array(
+        instruction.line, instruction.column,
+        [self.execute(value).value for value in instruction.value]
+    )
+    
+    def _execute_dictionary(self, instruction: codes.Dictionary):
+        return Dictionary(
+            instruction.line, instruction.column,
+            {self.execute(key): self.execute(value)
+            for key, value in instruction.value.items()}
         )
-
-    def _execute_nil(self, instruction: codes.Nil):
-        return Nil(instruction.line, instruction.column)
-
-    def _execute_bool(self, instruction: codes.Bool):
-        return Bool(instruction.line, instruction.column, instruction.value)
-
-    def _execute_string(self, instruction: codes.String):
-        return String(instruction.line, instruction.column, instruction.value)
-
-    def _execute_regex(self, instruction: codes.Regex):
-        return Regex(instruction.line, instruction.column, re_compile(instruction.value))
-
-    def _execute_hex(self, instruction: codes.Hex):
-        return Hex(instruction.line, instruction.column, instruction.value)
-
-    def _execute_int(self, instruction: codes.Int):
-        return Int(instruction.line, instruction.column, instruction.value)
-
-    def _execute_float(self, instruction: codes.Float):
-        return Float(instruction.line, instruction.column, instruction.value)
-
-    def _execute_array(self, instruction: codes.Array):
-        return Array(instruction.line, instruction.column, [
-            self.execute(value).value for value in instruction.value
-        ])
     
     def _execute_arrcomp(self, instruction: codes.ArrayComp):
         arr = self.execute(instruction.arr)
@@ -186,16 +185,38 @@ class VM:
         self.error(SNameError(instruction.value, [instruction.line, instruction.column]))
 
     def _execute_assign(self, instruction: codes.Assign):
+        value = self.execute(instruction.value)
+
+        if instruction.operation != '':
+            if self.env.get(instruction.name.value) is None:
+                self.error(SNameError(instruction.name.value, [instruction.line, instruction.column]))
+
+            current_value = self.env[instruction.name.value]
+            if current_value.constant:
+                self.error(SRuntimeError(f'Cannot assign to constant \'{instruction.name.value}\'',
+                    [instruction.line, instruction.column]
+                ))
+
+            current_value = current_value.value
+            value = self.operators[instruction.operation](current_value, value)
+
         if self.env.get(instruction.name.value) is not None:
-            if self.env.get(instruction.name.value).constant:
+            v = self.env.get(instruction.name.value)
+            if isinstance(v, Var) and v.constant:
                 self.error(SRuntimeError(f'Cannot assign to constant \'{instruction.name.value}\'',
                     [instruction.line, instruction.column]
                 ))
             else:
-                self.env[instruction.name.value].value = self.execute(instruction.value)
+                self.env[instruction.name.value].value = value
+
+        if instruction.type not in {value.type, 'any'}:
+            self.error(STypeError(
+                f'Assignment does not match annotated type \'{instruction.type}\'',
+                [instruction.line, instruction.column]
+            ))
         
         self.env[instruction.name.value] = Var(
-            instruction.line, instruction.column, instruction.name.value, self.execute(instruction.value),
+            instruction.line, instruction.column, instruction.name.value, value,
             instruction.constant
         )
 
@@ -264,11 +285,9 @@ class VM:
         while self.execute(instruction.condition):
             self.execute(instruction.body)
     
-    def _execute_import(self, instruction: codes.Import):
-        self.import_module(instruction.name[1:-1])
+    _execute_import = lambda self, instruction: self.import_module(instruction.name)
     
-    def _execute_return(self, instruction: codes.Return):
-        return self.execute(instruction.value)
+    _execute_return = lambda self, instruction: self.execute(instruction.value)
 
     def _execute_binaryop(self, instruction: codes.BinaryOp):
         left = self.execute(instruction.left)
@@ -278,6 +297,8 @@ class VM:
             out = self.operators[instruction.op](left, right)
         except TypeError:
             self._operator_error(left, instruction.op, right, [left.line, left.column])
+        except ZeroDivisionError:
+            self.error(STypeError('Cannot divide by zero', self.loose_pos))
 
         if out is None:
             self._operator_error(left, instruction.op, right, [left.line, left.column])
@@ -303,9 +324,20 @@ class VM:
 
         c.objects[f'_{instruction.name}'] = self.execute(instruction.value)
     
-    def _no_handler(self, _):
-        # print(f'No handler for instruction {instruction}')
-        return None
+    def _execute_index(self, instruction: codes.Index):
+        expr = self.execute(instruction.expr)
+        item = self.execute(instruction.item)
+        
+        try:
+            return expr[item]
+        except TypeError:
+            self.error(STypeError(f'Cannot index \'{expr.type}\'', [expr.line, expr.column]))
+        except KeyError:
+            self.error(SIndexError(f'Key not found \'{item}\'', [expr.line, expr.column]))
+        except IndexError:
+            self.error(SIndexError(f'Index out of range \'{item}\'', [expr.line, expr.column]))
+    
+    _no_handler = lambda _, instruction: None
 
     def execute(self, instruction):
         """
@@ -349,14 +381,13 @@ class VM:
         codes.Struct: _execute_struct,
         codes.New: _execute_new,
         codes.SetSelf: _execute_setself,
-        NoneType: _no_handler
+        NoneType: _no_handler,
+        codes.Index: _execute_index,
+        codes.Dictionary: _execute_dictionary
     }
 
 
-    def _operator_error(self, left, op: str, right, pos: list):
-        self.error(
-            STypeError(
-                f'Operator \'{op}\' cannot be applied to \'{left.type}\' and '
-                f'\'{right.type}\'',
-            pos)
-        )
+    _operator_error = lambda self, left, op, right, pos: self.error(
+        STypeError(f'Operator \'{op}\' cannot be applied to \'{left.type}\' and \'{right.type}\'',
+                   pos)
+    )

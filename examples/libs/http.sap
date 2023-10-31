@@ -1,5 +1,0 @@
-// Import knock
-import "knock"
-
-// Make a http request to https://www.google.com
-print(knock.knock('https://www.google.com'))

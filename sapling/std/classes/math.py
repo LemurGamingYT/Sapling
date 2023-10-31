@@ -35,11 +35,15 @@ class math:
     
     @call_decorator({'array': {'type': 'array'}}, req_vm=False)
     def _mean(self, array: Array) -> Float:
-        return Float(array.line, array.column, mean(array.value))
+        return Float(array.line, array.column, mean(array.to_py_list()))
     
     @call_decorator({'array': {'type': 'array'}, 'r': {'type': 'int'}}, req_vm=False)
     def _permutations(self, array: Array, r: Int) -> Array:
-        return Array.from_py_list(list(permutations(array.value, r.value)), array.line, array.column)
+        return Array.from_py_list(
+            [list(x) for x in permutations(array.value, r.value)],
+            array.line,
+            array.column
+        )
     
     @call_decorator({'x': {'type': 'int'}}, req_vm=False)
     def _factorial(self, x: Int) -> Int:
@@ -95,25 +99,25 @@ class math:
     def _log10(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, log10(x.value))
     
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
-    def _asine(self, x: Int | Float) -> Float:
-        return Float(x.line, x.column, asin(x.value))
+    # @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
+    # def _asine(self, x: Int | Float) -> Float:
+    #     return Float(x.line, x.column, asin(x.value))
     
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
-    def _acosine(self, x: Int | Float) -> Float:
-        return Float(x.line, x.column, acos(x.value))
+    # @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
+    # def _acosine(self, x: Int | Float) -> Float:
+    #     return Float(x.line, x.column, acos(x.value))
     
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
-    def _atangent(self, x: Int | Float) -> Float:
-        return Float(x.line, x.column, atan(x.value))
+    # @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
+    # def _atangent(self, x: Int | Float) -> Float:
+    #     return Float(x.line, x.column, atan(x.value))
     
-    @call_decorator({'x': {'type': {'int', 'float'}, 'y': {'type': {'int', 'float'}}}}, req_vm=False)
-    def _atangent2(self, x: Int | Float, y: Int | Float) -> Float:
-        return Float(x.line, x.column, atan2(x.value, y.value))
+    # @call_decorator({'x': {'type': {'int', 'float'}, 'y': {'type': {'int', 'float'}}}}, req_vm=False)
+    # def _atangent2(self, x: Int | Float, y: Int | Float) -> Float:
+    #     return Float(x.line, x.column, atan2(x.value, y.value))
     
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
-    def _random_int(self, x: Int) -> Int:
-        return Int(x.line, x.column, randint(0, x.value))
+    @call_decorator({'x': {'type': 'int', 'y': {'type': 'int'}}}, req_vm=False)
+    def _random_int(self, x: Int, y: Int) -> Int:
+        return Int(x.line, x.column, randint(x.value, y.value))
         
     @call_decorator({'x': {'type': 'array'}}, req_vm=False)
     def _random_array(self, x: Array):

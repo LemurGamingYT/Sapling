@@ -71,7 +71,7 @@ class system:
         return String(*vm.loose_pos, machine())
     
     @call_decorator()
-    def _network_name(self, vm) -> String:
+    def _device_name(self, vm) -> String:
         return String(*vm.loose_pos, node())
     
     @call_decorator()
@@ -86,24 +86,23 @@ class system:
     def _release(self, vm) -> String:
         return String(*vm.loose_pos, release())
     
-    @call_decorator({'cmd': {'type': 'string'}}, req_vm=False)
-    def _shell(self, cmd: String) -> String:
-        return String(cmd.line, cmd.column, shell(cmd.value))
-    
     @call_decorator()
     def _version(self, vm) -> String:
         return String(*vm.loose_pos, version())
     
     @call_decorator({'name': {'type': 'string'}}, req_vm=False)
     def _getenv(self, name: String) -> String:
+        if getenv(name.value) is None:
+            return Nil(name.line, name.column)
+        
         return String(name.line, name.column, getenv(name.value))
     
-    @call_decorator({'name': {'type': 'string'}, 'value': {'type': 'string'}}, req_vm=False)
-    def _setenv(self, name: String, value: String) -> Nil:
-        putenv(name.value, value.value)
-        return Nil(name.line, name.column)
+    # @call_decorator({'name': {'type': 'string'}, 'value': {'type': 'string'}}, req_vm=False)
+    # def _setenv(self, name: String, value: String) -> Nil:
+    #     putenv(name.value, value.value)
+    #     return Nil(name.line, name.column)
     
-    @call_decorator({'name': {'type': 'string'}}, req_vm=False)
-    def _delenv(self, name: String) -> Nil:
-        unsetenv(name.value)
-        return Nil(name.line, name.column)
+    # @call_decorator({'name': {'type': 'string'}}, req_vm=False)
+    # def _delenv(self, name: String) -> Nil:
+    #     unsetenv(name.value)
+    #     return Nil(name.line, name.column)

@@ -4,9 +4,8 @@ from rply import LexerGenerator, LexingError
 from rply.lexer import LexerStream
 from rply.token import Token
 
-from sapling.objects import Regex, String, Nil, Class, Func
+from sapling.objects import Regex, String, Nil, Class, Array
 from sapling.std.call_decorator import call_decorator
-from sapling.vmutils import Param
 from sapling.error import SError
 
 
@@ -25,11 +24,21 @@ class token:
     __name__ = 'token'
     type = 'tokens'
     
-    def __init__(self, t: Token) -> None:
+    def __init__(self, t: Token, vm) -> None:
+        self.vm = vm
         self.t = t
     
     def repr(self, _) -> str:
         return f'token({self.t.name}, {self.t.value})'
+    
+    
+    @property
+    def _name(self) -> String:
+        return String(*self.vm.loose_pos, self.t.name)
+    
+    @property
+    def _value(self) -> String:
+        return String(*self.vm.loose_pos, self.t.value)
 
 
 class tokens:
@@ -38,15 +47,26 @@ class tokens:
     
     def __init__(self, stream: LexerStream, vm) -> None:
         self.stream = stream
+        self.vm = vm
+        
         try:
             self.as_list = [
-                Class.from_py_cls(token(x), *vm.loose_pos) for x in list(self.stream)
+                Class.from_py_cls(token(x, vm), *vm.loose_pos) for x in list(self.stream)
             ]
         except LexingError as e:
             vm.error(SLexError(e.message, vm.loose_pos))
     
     def repr(self, _) -> str:
         return '{' + ', '.join([x.repr(self) for x in self.as_list]) + '}'
+    
+    
+    @property
+    def _tokens(self) -> Array:
+        return Array.from_py_list(self.as_list, *self.vm.loose_pos)
+    
+    @property
+    def _stream(self) -> LexerStream:
+        return self.stream
 
 
 class lexer:

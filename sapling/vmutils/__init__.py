@@ -59,6 +59,8 @@ def py_to_sap(value, line: int, column: int):
             return Array.from_py_list(value, line, column)
         case 'function':
             return Func(line, column, value.__name__, value.params, func=value)
+        case 'method':
+            return Func(line, column, value.__name__[1:], value.params, func=value)
         case _:
             return value
 

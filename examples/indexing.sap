@@ -1,0 +1,11 @@
+// Create a string to index
+s = "Hello world"
+
+// Create an array to index
+arr = range(0, 50, 10)
+
+// Index start of the array
+print(arr[0])
+
+// Index the first element in the string
+print(s[0])

@@ -18,56 +18,19 @@ from sapling.constants import TOKENS, PRECEDENCE
 from sapling.codes import (
     Code, Assign, FuncDef, If, While, Body, Arg, Args, Param, Params, Id, Int, String, Bool,
     Nil, BinaryOp, Float, Array, Attribute, Call, UnaryOp, Continue, Import, Break, Return,
-    Regex, Hex, Struct, Enum, EnumDefinition, StructDefinition, ArrayComp, New
+    Regex, Hex, Struct, Enum, EnumDefinition, StructDefinition, ArrayComp, New, Index, Dictionary
 )
 
 
 pg = ParserGenerator(TOKENS, PRECEDENCE)
 
 
-def get_pos(rule) -> list[int]:
-    """Gets the position of the rule
-
-    Args:
-        rule (Token | Any): The rule to get the position of
-
-    Returns:
-        list[int]: list[int, int] of the line, column
-    """
-
-    if isinstance(rule, Token):
-        return [rule.source_pos.lineno, rule.source_pos.colno]
-
-    return [rule.line, rule.column]
+get_pos = lambda rule: [rule.source_pos.lineno, rule.source_pos.colno]\
+    if isinstance(rule, Token) else [rule.line, rule.column]
 
 
-@pg.production('code :')
-def empty(_) -> Code:
-    """Handles an empty file
-
-    Args:
-        p (list): (Unused) The list of tokens provided by RPLY
-
-    Returns:
-        Code: The code bytecode object
-    """
-
-    return Code(0, 0, [])
-
-
-@pg.production('code : stmts')
-def code(p) -> Code:
-    """Handles multiple code statements
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        Code: The code bytecode object
-    """
-
-    return Code(0, 0, p[0])
-
+empty = pg.production('code :')(lambda _: Code(0, 0, []))
+code = pg.production('code : stmts')(lambda p: Code(0, 0, p[0]))
 
 @pg.production('stmts : stmt')
 @pg.production('stmts : stmts stmt')
@@ -84,35 +47,29 @@ def stmts(p) -> list:
     return [p[0]] if len(p) == 1 else p[0] + [p[1]]
 
 
-@pg.production('stmt : expr')
-def expr(p):
-    """Handles a single expression as a statement
+expr = pg.production('stmt : expr')(lambda p: p[0])
 
-    Args:
-        p (list): The list of tokens provided by RPLY
+assign = pg.production('stmt : Id = expr')(
+    lambda p: Assign(*get_pos(p[0]), p[0], p[2], False, '', 'any')
+)
+annotated_assign = pg.production('stmt : Id : Id = expr')(
+    lambda p: Assign(*get_pos(p[0]), p[0], p[4], False, '', p[2].getstr())
+)
+annotated_const_assign = pg.production('stmt : Const Id : Id = expr')(lambda p:
+    Assign(*get_pos(p[0]), p[1], p[4], True, '', p[3])
+)
+const_assign = pg.production('stmt : Const Id = expr')(lambda p:
+    Assign(*get_pos(p[0]), p[1], p[3], True, '', 'any')
+)
 
-    Returns:
-        type: The output of the expression statement
-    """
 
-    return p[0]
-
-@pg.production('stmt : Id = expr')
-def assign(p) -> Assign:
-    """Handles variable assignment
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        Assign: The assignment bytecode object
-    """
-
-    return Assign(*get_pos(p[0]), p[0], p[2], False)
-
-@pg.production('stmt : Const Id = expr')
-def const_assign(p) -> Assign:
-    """Handle variable assignment with a constant value
+@pg.production('stmt : Id + = expr')
+@pg.production('stmt : Id - = expr')
+@pg.production('stmt : Id * = expr')
+@pg.production('stmt : Id / = expr')
+@pg.production('stmt : Id % = expr')
+def assign_with_op(p) -> Assign:
+    """Handles variable assignment with an operation
 
     Args:
         p (list): The list of tokens provided by RPLY
@@ -120,8 +77,9 @@ def const_assign(p) -> Assign:
     Returns:
         Assign: The assignment bytecode object
     """
-    
-    return Assign(*get_pos(p[0]), p[1], p[3], True)
+
+    return Assign(*get_pos(p[0]), p[0], p[3], False, p[1].getstr(), 'any')
+
 
 @pg.production('stmt : Func Id ( ) body')
 @pg.production('stmt : Func Id ( params ) body')
@@ -142,123 +100,34 @@ def func_def(p) -> FuncDef:
         p[5] if len(p) == 6 else p[4]
     )
 
-@pg.production('stmt : If expr body')
-def if_stmt(p) -> If:
-    """Handles a single condition if statement
 
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        If: The If statement bytecode object
-    """
-
-    return If(*get_pos(p[0]), p[1], p[2], None)
-
-@pg.production('stmt : If expr body Else body')
-def if_else_stmt(p) -> If:
-    """Handles if-else statements
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        If: The If statement bytecode object (with the otherwise parameter filled)
-    """
-
-    return If(*get_pos(p[0]), p[1], p[2], p[4])
-
-@pg.production('stmt : While expr body')
-def while_stmt(p) -> While:
-    """Handles a while statement
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        While: The While statement bytecode object
-    """
-
-    return While(*get_pos(p[0]), p[1], p[2])
-
-@pg.production('stmt : Import String')
-def import_stmt(p) -> Import:
-    """Handles an import statement
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        Import: The Import statement bytecode object
-    """
-
-    return Import(*get_pos(p[0]), p[1].getstr())
-
-@pg.production('stmt : Continue')
-def continue_stmt(p) -> Continue:
-    """Handles a continue statement
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        Continue: The Continue statement bytecode object
-    """
-
-    return Continue(*get_pos(p[0]))
-
-@pg.production('stmt : Break')
-def break_stmt(p) -> Break:
-    """Handles a break statement
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        Break: The Break statement bytecode object
-    """
-
-    return Break(*get_pos(p[0]))
-
-@pg.production('stmt : Return expr')
-def return_stmt(p) -> Return:
-    """Handles a return statement
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        Return: The Return statement bytecode object
-    """
-
-    return Return(*get_pos(p[0]), p[1])
-
-@pg.production('stmt : Enum Id { enum_defs }')
-def enum(p) -> Enum:
-    """Handles an enum definition
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        Enum: The Enum bytecode object
-    """
-
-    return Enum(*get_pos(p[0]), p[1].getstr(), p[3])
-
-@pg.production('stmt : Struct Id { struct_defs }')
-def struct(p) -> Struct:
-    """Handles a struct definition
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        Struct: The Struct bytecode object
-    """
-
-    return Struct(*get_pos(p[0]), p[1].getstr(), p[3])
-
+if_stmt = pg.production('stmt : If expr body')(lambda p:
+    If(*get_pos(p[0]), p[1], p[2], None)
+)
+if_else_stmt = pg.production('stmt : If expr body Else body')(lambda p:
+    If(*get_pos(p[0]), p[1], p[2], p[4])
+)
+while_stmt = pg.production('stmt : While expr body')(lambda p:
+    While(*get_pos(p[0]), p[1], p[2])
+)
+import_stmt = pg.production('stmt : Import String')(lambda p:
+    Import(*get_pos(p[0]), p[1].getstr())
+)
+continue_stmt = pg.production('stmt : Continue')(lambda p: Continue(*get_pos(p[0])))
+break_stmt = pg.production('stmt : Break')(lambda p: Break(*get_pos(p[0])))
+return_stmt = pg.production('stmt : Return expr')(lambda p: Return(*get_pos(p[0]), p[1]))
+enum = pg.production('stmt : Enum Id { enum_defs }')(lambda p:
+    Enum(*get_pos(p[0]), p[1].getstr(), p[3])
+)
+enum_def = pg.production('enum_def : Id = expr')(lambda p:
+    EnumDefinition(*get_pos(p[0]), p[0].getstr(), p[2])
+)
+struct = pg.production('stmt : Struct Id { struct_defs }')(lambda p:
+    Struct(*get_pos(p[0]), p[1].getstr(), p[3])
+)
+struct_def = pg.production('struct_def : Id Id')(lambda p:
+    StructDefinition(*get_pos(p[0]), p[1].getstr(), p[0].getstr())
+)
 
 @pg.production('struct_defs : struct_def')
 @pg.production('struct_defs : struct_defs struct_def')
@@ -273,20 +142,6 @@ def struct_defs(p) -> list:
     """
 
     return [p[0]] if len(p) == 1 else p[0] + [p[1]]
-
-
-@pg.production('struct_def : Id Id')
-def struct_def(p) -> StructDefinition:
-    """Handles a struct definition
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        StructDefinition: The Struct bytecode object
-    """
-
-    return StructDefinition(*get_pos(p[0]), p[1].getstr(), p[0].getstr())
 
 
 @pg.production('enum_defs : enum_def')
@@ -304,20 +159,6 @@ def enum_defs(p) -> list:
     return [p[0]] if len(p) == 1 else p[0] + [p[1]]
 
 
-@pg.production('enum_def : Id = expr')
-def enum_def(p) -> EnumDefinition:
-    """Handles an enum definition
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        EnumDefinition: The Enum bytecode object
-    """
-
-    return EnumDefinition(*get_pos(p[0]), p[0].getstr(), p[2])
-
-
 @pg.production('body : { }')
 @pg.production('body : { stmts }')
 def body(p) -> Body:
@@ -333,18 +174,7 @@ def body(p) -> Body:
     return Body(*get_pos(p[0]), p[1] if len(p) == 3 else [])
 
 
-@pg.production('arg : expr')
-def arg(p) -> Arg:
-    """Handles a single argument
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        Arg: The Arg bytecode object
-    """
-
-    return Arg(*get_pos(p[0]), p[0])
+arg = pg.production('arg : expr')(lambda p: Arg(*get_pos(p[0]), p[0]))
 
 
 @pg.production('args : arg')
@@ -362,31 +192,13 @@ def args(p) -> Args:
     return Args(*get_pos(p[0]), [p[0]] if len(p) == 1 else p[0].args + [p[2]])
 
 
-@pg.production('param : Id')
-def param(p) -> Param:
-    """Handles a single parameter
+param = pg.production('param : Id')(lambda p:
+    Param(*get_pos(p[0]), p[0].getstr(), 'any', None)
+)
+annotated_param = pg.production('param : Id : Id')(lambda p:
+    Param(*get_pos(p[0]), p[0].getstr(), p[2].getstr(), None)
+)
 
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        Param: The Param bytecode object
-    """
-
-    return Param(*get_pos(p[0]), p[0].getstr(), 'any', None)
-
-@pg.production('param : Id : Id')
-def annotated_param(p) -> Param:
-    """Handles an annotated parameter
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        Param: The Param bytecode object
-    """
-
-    return Param(*get_pos(p[0]), p[0].getstr(), p[2].getstr(), None)
 
 @pg.production('param : Id = expr')
 @pg.production('param : Id : Id = expr')
@@ -421,6 +233,20 @@ def params(p) -> Params:
     """
 
     return Params(*get_pos(p[0]), [p[0]] if len(p) == 1 else p[0].params + [p[2]])
+
+@pg.production('dictionary_items : expr : expr')
+@pg.production('dictionary_items : dictionary_items , expr : expr')
+def dictionary_items(p) -> dict:
+    """Handles dictionary items
+
+    Args:
+        p (list): The list of tokens provided by RPLY
+
+    Returns:
+        dict: The Dictionary bytecode object
+    """
+
+    return {p[0]: p[2]} if len(p) == 3 else p[0] + {p[2]: p[4]}
 
 
 @pg.production('expr : Int')
@@ -478,6 +304,19 @@ def array_literal(p) -> Array:
 
     return Array(*get_pos(p[0]), p[1].args if len(p) == 3 else [])
 
+@pg.production('expr : { dictionary_items }')
+def dictionary(p) -> Dictionary:
+    """Handles dictionary object definitions
+
+    Args:
+        p (list): The list of tokens provided by RPLY
+
+    Returns:
+        Dictionary: The Dictionary bytecode object
+    """
+
+    return Dictionary(*get_pos(p[0]), p[1])
+
 @pg.production('expr : expr + expr')
 @pg.production('expr : expr - expr')
 @pg.production('expr : expr * expr')
@@ -525,21 +364,12 @@ def relational_op(p) -> BinaryOp:
 
     return BinaryOp(*get_pos(p[0]), p[1].gettokentype(), p[0], p[2])
 
-@pg.production('expr : ! expr')
-def unary_op(p) -> UnaryOp:
-    """Handles unary operations
+unary_op = pg.production('expr : ! expr')(lambda p:
+    UnaryOp(*get_pos(p[0]), p[0].gettokentype(), p[1])
+)
 
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        UnaryOp: The Unary Operation bytecode object
-    """
-
-    return UnaryOp(*get_pos(p[0]), p[0].gettokentype(), p[1])
-
-@pg.production('expr : expr ( )')
-@pg.production('expr : expr ( args )')
+@pg.production('expr : expr ( )', 'func_call')
+@pg.production('expr : expr ( args )', 'func_call')
 def call(p) -> Call:
     """Handles function calls
 
@@ -552,18 +382,12 @@ def call(p) -> Call:
 
     return Call(*get_pos(p[0]), p[0], p[2] if len(p) == 4 else [])
 
-@pg.production('expr : expr . Id')
-def attr(p) -> Attribute:
-    """Handles attribute accesses
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        Attribute: The Attribute bytecode object
-    """
-
-    return Attribute(*get_pos(p[0]), p[0], f'_{p[2].getstr()}')
+attr = pg.production('expr : expr . Id')(lambda p:
+    Attribute(*get_pos(p[0]), p[0], f'_{p[2].getstr()}')
+)
+index = pg.production('expr : expr [ expr ]')(lambda p:
+    Index(*get_pos(p[0]), p[0], p[2])
+)
 
 @pg.production('expr : New expr ( )')
 @pg.production('expr : New expr ( args )')
@@ -579,18 +403,9 @@ def new(p) -> New:
     
     return New(*get_pos(p[0]), p[1], p[3] if len(p) == 5 else [])
 
-@pg.production('expr : { expr : Id <- expr }')
-def array_comp(p) -> ArrayComp:
-    """Handles array comprehension
-
-    Args:
-        p (list): The list of tokens provided by RPLY
-
-    Returns:
-        ArrayComp: The ArrayComp bytecode object
-    """
-
-    return ArrayComp(*get_pos(p[0]), p[1], p[3].getstr(), p[5])
+array_comp = pg.production('expr : { expr : Id <- expr }')(lambda p:
+    ArrayComp(*get_pos(p[0]), p[1], p[3].getstr(), p[5])
+)
 
 
 def parse(tokens: LexerStream) -> Code:
