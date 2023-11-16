@@ -1,7 +1,7 @@
 // Perform mathematical functions
-print(math.sine(10))
-print(math.cosine(270))
-print(math.round(5.6))
+print(Math.sine(10))
+print(Math.cosine(270))
+print(Math.round(5.6))
 
 // Create a function to run a thread on
 func thread_test() {
@@ -13,6 +13,6 @@ func thread_test() {
     print('Thread finished')
 }
 
-t = threads.thread(thread_test)
+t = Threads.thread(thread_test)
 print(t)
 t.run()

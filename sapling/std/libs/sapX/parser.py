@@ -18,12 +18,12 @@ class SParserError(SError):
         sys_exit(1)
 
 
-class parser:
-    __name__ = 'parser'
-    type = 'parser'
+class Parser:
+    __name__ = 'Parser'
+    type = 'Parser'
     
     def repr(self, _) -> str:
-        return f'parser(tokens: {self.tokens.repr(None)})'
+        return f'Parser(tokens: {self.tokens.repr(None)})'
     
     
     def __init__(self, t: Class, tokens: list[str]) -> None:

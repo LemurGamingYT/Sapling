@@ -6,7 +6,7 @@ Contains all the object classes used by the VM
 
 """
 
-from typing import Callable, Self, Iterable, AnyStr
+from typing import Callable, Self, Iterable, AnyStr, Union
 from pickle import HIGHEST_PROTOCOL, dumps, loads
 from re import Pattern, compile as re_compile
 from dataclasses import dataclass, field
@@ -17,12 +17,14 @@ from sapling.error import SAttributeError
 from sapling.codes import Body
 
 
-@dataclass
+@dataclass(slots=True)
 class Node:
     """Used to represent a node in the VM"""
 
     line: int = field(hash=False, repr=False, compare=False)
     column: int = field(hash=False, repr=False, compare=False)
+
+    type = 'node'
 
     def repr(self, _) -> str:
         """Used to get the representation of the node for printing
@@ -37,7 +39,7 @@ class Node:
         return str(self.value) if hasattr(self, 'value') else self
 
 
-@dataclass(unsafe_hash=True)
+@dataclass(unsafe_hash=True, slots=True)
 class Int(Node):
     """Used to represent integers to Sapling"""
 
@@ -147,7 +149,7 @@ class Int(Node):
         return self.value > 0
 
 
-@dataclass(unsafe_hash=True)
+@dataclass(unsafe_hash=True, slots=True)
 class Float(Node):
     """Used to represent floating point numbers in Sapling"""
 
@@ -237,7 +239,7 @@ class Float(Node):
         return self.value > 0.0
 
 
-@dataclass(unsafe_hash=True)
+@dataclass(unsafe_hash=True, slots=True)
 class Hex(Node):
     """Used to represent a hex number in Sapling"""
     
@@ -246,7 +248,7 @@ class Hex(Node):
     type = 'hex'
 
 
-@dataclass(unsafe_hash=True)
+@dataclass(unsafe_hash=True, slots=True)
 class String(Node):
     """Used to represent a string in Sapling"""
 
@@ -276,7 +278,7 @@ class String(Node):
 
     @call_decorator({'text': {'type': 'string'}}, req_vm=False)
     def _split(self, text: Self) -> 'Array':
-        return Array(self.line, self.column, self.value.split(text.value))
+        return Array.from_py_iter(self.value.split(text.value), self.line, self.column)
 
     @call_decorator({'text': {'type': 'string'}}, req_vm=False)
     def _join(self, text: Self) -> Self:
@@ -365,7 +367,7 @@ class String(Node):
         return String(self.line, self.column, self.value[i.value])
 
 
-@dataclass(unsafe_hash=True)
+@dataclass(unsafe_hash=True, slots=True)
 class StrBytes(String):
     """Used to represent and store a byte string in Sapling"""
 
@@ -470,7 +472,7 @@ class StrBytes(String):
         return StrBytes(self.line, self.column, self.value[i.value])
 
 
-@dataclass(unsafe_hash=True)
+@dataclass(unsafe_hash=True, slots=True)
 class Bool(Node):
     """Used to represent a boolean (1 or 0) in Sapling"""
 
@@ -506,7 +508,7 @@ class Bool(Node):
         return self.value
 
 
-@dataclass(unsafe_hash=True)
+@dataclass(unsafe_hash=True, slots=True)
 class Nil(Node):
     """Used to represent None/null/nil in Sapling"""
 
@@ -521,7 +523,7 @@ class Nil(Node):
         return False
 
 
-@dataclass(unsafe_hash=True)
+@dataclass(unsafe_hash=True, slots=True)
 class Regex(Node):
     """Used to represent and store a regular expression in Sapling"""
 
@@ -586,13 +588,13 @@ class Regex(Node):
         return len(self.value.pattern)
     
     def __getitem__(self, i):
-        if i.value >= len(self.value):
+        if i.value >= len(self.value.pattern):
             raise IndexError()
         
-        return Regex(self.line, self.column, self.value.pattern[i.value])
+        return Regex(self.line, self.column, re_compile(self.value.pattern[i.value]))
 
 
-@dataclass
+@dataclass(slots=True)
 class Array(Node):
     """Used to represent an array of nodes in Sapling"""
 
@@ -601,15 +603,15 @@ class Array(Node):
     type = 'array'
 
     def repr(self, _) -> str:
-        return f'{{{', '.join(map(lambda x: x.repr(self), self.value))}}}'
+        return '{' + ', '.join(map(lambda x: x.repr(self), self.value)) + '}'
 
 
     @staticmethod
-    def from_py_list(py_list: Iterable, line: int, column: int) -> Self:
+    def from_py_iter(py_iterable: Iterable, line: int, column: int) -> 'Array':
         """Convert a python iterable to a Sapling Array
 
         Args:
-            py_list (Iterable): The python iterable
+            py_iterable (Iterable): The python iterable
             line (int): The line of the array
             column (int): The column of the array
 
@@ -618,7 +620,7 @@ class Array(Node):
         """
 
         return Array(line, column, list(map(lambda v:
-            py_to_sap(v, line, column), py_list))
+            py_to_sap(v, line, column), py_iterable))
         )
 
     def to_py_list(self) -> list:
@@ -701,7 +703,7 @@ class Array(Node):
         return self.value[i.value]
 
 
-@dataclass
+@dataclass(slots=True)
 class Dictionary(Node):
     """Used to represent a dictionary/map/hashmap in Sapling"""
     
@@ -711,15 +713,19 @@ class Dictionary(Node):
     
     
     def repr(self, _) -> str:
-        return f'{{{', '.join(map(lambda x: f'{x[0].repr(self)}: {x[1].repr(self)}', self.value.items()))}}}'
-    
+        return '{' + ', '.join(
+            map(lambda x: f'{x[0].repr(self)}: {x[1].repr(self)}', self.value.items()
+        )) + '}'
+
     
     @staticmethod
-    def from_py_dict(d: dict, line: int, column: int) -> Self:
+    def from_py_dict(d: dict, line: int, column: int) -> 'Dictionary':
         """Convert a python dictionary to a Sapling Dictionary object
 
         Args:
             d (dict): The python dictionary
+            line (int): The line of where the dictionary is created
+            column (int): The column of where the dictionary is created
 
         Returns:
             Dictionary: The generated dictionary
@@ -742,11 +748,11 @@ class Dictionary(Node):
     
     @property
     def _keys(self) -> Array:
-        return Array(self.line, self.column, self.value.keys())
+        return Array.from_py_iter(self.value.keys(), self.line, self.column)
     
     @property
     def _values(self) -> Array:
-        return Array(self.line, self.column, self.value.values())
+        return Array.from_py_iter(self.value.values(), self.line, self.column)
     
     
     @call_decorator({'key': {}}, req_vm=False)
@@ -769,7 +775,7 @@ class Dictionary(Node):
         return self.value[key.value]
 
 
-@dataclass
+@dataclass(slots=True)
 class Var(Node):
     """Used to represent a variable in Sapling"""
     
@@ -778,14 +784,14 @@ class Var(Node):
     constant: bool = field(default=False)
 
 
-@dataclass(unsafe_hash=True)
+@dataclass(unsafe_hash=True, slots=True)
 class Func(Node):
     """Used to represent a function in Sapling"""
 
     name: str
     params: list[Param]
     body: Body | None = field(default=None)
-    func: Callable | None = field(default=None)
+    func: Union[Callable, None] = field(default=None)
 
     type = 'func'
 
@@ -810,9 +816,15 @@ class Func(Node):
     def __call__(self, vm, args):
         if self.func is not None:
             return self.func(vm, args)
-
-        if self.body is not None:
+        elif self.body is not None:
             from sapling.vm import VM
+
+            if not isinstance(vm, VM):
+                parent_cls = vm
+                vm = args[0]
+                args = args[1:]
+
+                vm.env['self'] = parent_cls
 
             env = vm.env
             args = verify_params(vm, args, self.params)
@@ -820,19 +832,42 @@ class Func(Node):
                 env[param.name] = arg
 
             func_vm = VM(vm.src, env)
-            return func_vm.execute(self.body)
+            out = func_vm.execute(self.body)
+            return out if out is not None else Nil(*vm.loose_pos)
 
         return Nil(*vm.loose_pos)
 
 
-@dataclass(unsafe_hash=True)
+@dataclass(unsafe_hash=True, slots=True)
+class Method(Func):
+    """Used to represent a method of a class"""
+
+    parent_cls: 'Class' = field(default=None)
+    is_static: bool = field(default=False)
+    is_overriden: bool = field(default=False)
+
+    type = 'method'
+
+    def repr(self, _) -> str:
+        return f'Method \'{self.name}\''
+
+
+    def __call__(self, vm, args: list):
+        args.insert(0, vm)
+        vm = self.parent_cls
+
+        return super(Method, self).__call__(vm, args)
+
+
+@dataclass(unsafe_hash=True, slots=True)
 class Class(Node):
     """Used to represent a class in Sapling"""
 
     name: str
     objects: dict
-    repr_func: Callable | None = field(default=None)
+    repr_func: Union[Callable, None] = field(default=None)
     type: str = field(default='class')
+    python_class: Union[type, None] = field(default=None)
 
     def repr(self, context) -> str:
         if self.repr_func is not None:
@@ -844,7 +879,7 @@ class Class(Node):
         return f'Class \'{self.name}\''
 
     @staticmethod
-    def from_py_cls(py_cls: type, line: int, column: int) -> Self:
+    def from_py_cls(py_cls, line: int, column: int) -> 'Class':
         """Converts a python class into a Sapling Class
 
         Args:
@@ -860,26 +895,25 @@ class Class(Node):
             name: py_to_sap(getattr(py_cls, name), line, column)
             for name in dir(py_cls)
             if not name.startswith('__') and name.startswith('_')
-        }, getattr(py_cls, 'repr', None), getattr(py_cls, 'type', 'class'))
-
+        }, getattr(py_cls, 'repr', None), getattr(py_cls, 'type', 'class'), py_cls)
 
     def __getattr__(self, attr: str):
         if self.objects.get(attr) is not None:
             return self.objects[attr]
 
         raise AttributeError()
-    
+
     def __dir__(self):
         return list(self.objects.keys())
 
 
-@dataclass(unsafe_hash=True)
+@dataclass(unsafe_hash=True, slots=True)
 class Lib(Node):
     """Used to represent a library in Sapling"""
 
     name: str
     objects: dict
-    repr_func: Callable | None = field(default=None)
+    repr_func: Union[Callable, None] = field(default=None)
     type: str = field(default='lib')
 
     def repr(self, context) -> str:
@@ -893,7 +927,7 @@ class Lib(Node):
 
 
     @staticmethod
-    def from_py(py_lib: type, line: int, column: int) -> Self:
+    def from_py(py_lib: type, line: int, column: int) -> 'Lib':
         """Converts the python library class into a Sapling Lib(rary)
 
         Args:

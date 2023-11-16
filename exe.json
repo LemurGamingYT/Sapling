@@ -19,7 +19,7 @@
   },
   {
    "optionDest": "icon_file",
-   "value": "C:/Users/alex/Desktop/Programming/Python/Sapling/icon.ico"
+   "value": "C:/Programming/Python/Sapling/icon.ico"
   },
   {
    "optionDest": "name",
@@ -63,15 +63,15 @@
   },
   {
    "optionDest": "datas",
-   "value": "C:/Users/alex/Desktop/Programming/Python/Sapling/sapling;sapling/"
+   "value": "C:/Programming/Python/Sapling/sapling;sapling/"
   },
   {
    "optionDest": "datas",
-   "value": "C:/Users/alex/Desktop/Programming/Python/Sapling/rply;rply/"
+   "value": "C:/Programming/Python/Sapling/rply;rply/"
   },
   {
    "optionDest": "datas",
-   "value": "C:/Users/alex/Desktop/Programming/Python/Sapling/appdirs.py;."
+   "value": "C:/Programming/Python/Sapling/appdirs.py;."
   }
  ],
  "nonPyinstallerOptions": {

@@ -9,13 +9,22 @@ Contains utility functions used while the VM is running
 from dataclasses import dataclass, field
 from collections import namedtuple
 
+from sapling.error import STypeError
+from sapling.parser import parse
+from sapling.codes import Code
+from sapling.lexer import lex
+
+
+def get_bytecode(src: str) -> Code:
+    return parse(lex(src))
+
 
 @dataclass
 class Param:
     """Represents a Parameter of a function"""
 
     name: str
-    type: str = field(default='any')
+    type: str | set = field(default='any')
     default: any = field(default=None)
 
 
@@ -27,11 +36,52 @@ class Arg:
     name: str = field(default='')
 
 
-def py_to_sap(value, line: int, column: int):
+def invalid_cast_type(vm, t: str):
+    vm.error(STypeError(f'Invalid cast type \'{t}\'', vm.loose_pos))
+
+
+def verify_args(vm, args: list[Arg], params: list[Param]) -> list:
+    new_args = []
+    z = zip(args, params)
+    for arg, param in z:
+        param_type = param.type
+        arg_type = arg.value.type
+        if isinstance(param_type, str) and param_type != 'any' and arg_type != param_type:
+            vm.error(STypeError(
+                    f'Expected \'{param_type}\' but got \'{arg_type}\'',
+                    [arg.value.line, arg.value.column]
+                )
+            )
+        elif isinstance(param_type, set) and 'any' not in param_type and arg_type not in param_type:
+            vm.error(STypeError(
+                f'Expected \'{param_type}\' but got \'{arg_type}\'',
+                [arg.value.line, arg.value.column]
+            ))
+
+        new_args.append(arg.value)
+
+    if len(new_args) < len(params):
+        for param in params:
+            if param.default is not None:
+                if isinstance(param.default, tuple):
+                    new_args.append(param.default[0](*vm.loose_pos, param.default[1]))
+                else:
+                    new_args.append(param.default)
+
+    if len(params) < len(new_args) > len(params):
+        vm.error(STypeError(f'Expected {len(params)} arguments, got {len(new_args)}', [
+            args[0].value.line,
+            args[0].value.column
+        ]))
+
+    return new_args
+
+
+def py_to_sap(value, line: int, column: int, **kwargs):
     """Converts a python object to a Sapling Node/object
 
     Args:
-        value (type): The python object
+        value (Any): The python object
         line (int): The line of execution
         column (int): The column of execution
 
@@ -39,7 +89,7 @@ def py_to_sap(value, line: int, column: int):
         Node/object: The Sapling Node/object equivalent of the python object
     """
 
-    from sapling.objects import Nil, Array, Regex, String, Int, Float, Bool, Func
+    from sapling.objects import Nil, Array, Regex, String, Int, Float, Bool, Func, Method
     py_to_sap_map = {
         'str': String,
         'bool': Bool,
@@ -56,11 +106,11 @@ def py_to_sap(value, line: int, column: int):
 
     match value.__class__.__name__:
         case 'list':
-            return Array.from_py_list(value, line, column)
+            return Array.from_py_iter(value, line, column)
         case 'function':
-            return Func(line, column, value.__name__, value.params, func=value)
+            return Func(line, column, value.__name__, value.params, func=value, **kwargs)
         case 'method':
-            return Func(line, column, value.__name__[1:], value.params, func=value)
+            return Method(line, column, value.__name__[1:], value.params, func=value, **kwargs)
         case _:
             return value
 
@@ -80,7 +130,7 @@ def sap_to_py(value):
             return value.value
         case 'Array':
             return value.to_py_list()
-        case 'Func':
+        case 'Func' | 'Method':
             return value.func
 
 

@@ -1,8 +1,8 @@
 from sys import exit as sys_exit
 
 from rply import LexerGenerator, LexingError
+from rply.token import Token as RToken
 from rply.lexer import LexerStream
-from rply.token import Token
 
 from sapling.objects import Regex, String, Nil, Class, Array
 from sapling.std.call_decorator import call_decorator
@@ -20,16 +20,18 @@ class SLexError(SError):
         sys_exit(1)
 
 
-class token:
-    __name__ = 'token'
-    type = 'tokens'
+class Token:
+    __name__ = 'Token'
+    type = 'Tokens'
     
-    def __init__(self, t: Token, vm) -> None:
+    __slots__ = ('t', 'vm')
+    
+    def __init__(self, t: RToken, vm) -> None:
         self.vm = vm
         self.t = t
     
     def repr(self, _) -> str:
-        return f'token({self.t.name}, {self.t.value})'
+        return f'Token({self.t.name}, {self.t.value})'
     
     
     @property
@@ -41,9 +43,11 @@ class token:
         return String(*self.vm.loose_pos, self.t.value)
 
 
-class tokens:
-    __name__ = 'tokens'
-    type = 'tokens'
+class Tokens:
+    __name__ = 'Tokens'
+    type = 'Tokens'
+    
+    __slots__ = ('stream', 'vm', 'as_list')
     
     def __init__(self, stream: LexerStream, vm) -> None:
         self.stream = stream
@@ -51,7 +55,7 @@ class tokens:
         
         try:
             self.as_list = [
-                Class.from_py_cls(token(x, vm), *vm.loose_pos) for x in list(self.stream)
+                Class.from_py_cls(Token(x, vm), *vm.loose_pos) for x in list(self.stream)
             ]
         except LexingError as e:
             vm.error(SLexError(e.message, vm.loose_pos))
@@ -62,19 +66,21 @@ class tokens:
     
     @property
     def _tokens(self) -> Array:
-        return Array.from_py_list(self.as_list, *self.vm.loose_pos)
+        return Array.from_py_iter(self.as_list, *self.vm.loose_pos)
     
     @property
     def _stream(self) -> LexerStream:
         return self.stream
 
 
-class lexer:
-    __name__ = 'lexer'
-    type = 'lexer'
+class Lexer:
+    __name__ = 'Lexer'
+    type = 'Lexer'
+    
+    __slots__ = ('lg', 'src')
     
     def repr(self, _) -> str:
-        return f'lexer(src: {self.src})'
+        return f'Lexer(src: {self.src})'
     
     def __init__(self, src: str):
         self.lg = LexerGenerator()
@@ -93,4 +99,4 @@ class lexer:
     
     @call_decorator()
     def _tokenize(self, vm) -> Class:
-        return Class.from_py_cls(tokens(self.lg.build().lex(self.src), vm), *vm.loose_pos)
+        return Class.from_py_cls(Tokens(self.lg.build().lex(self.src), vm), *vm.loose_pos)

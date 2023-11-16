@@ -5,6 +5,7 @@ from .time import time
 from .sapX import sapX
 from .mem import mem
 # from .ai import ai
+from .ui import ui
 
 
 public_libs = {
@@ -15,4 +16,5 @@ public_libs = {
     'sapX': sapX,
     'mem': mem,
     # 'ai': ai,
+    'ui': ui,
 }

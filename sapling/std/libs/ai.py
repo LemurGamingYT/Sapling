@@ -22,14 +22,15 @@ class model:
         self.model = MultinomialNB()
         self.model.fit(features_train, labels_train)
         
-    
-    def repr(self, _) -> str:
+
+    @staticmethod
+    def repr(_) -> str:
         return 'model()'
     
     
     @call_decorator({'input': {'type': 'array'}}, req_vm=False)
-    def _predict(self, input: Array) -> Float:
-        return Float(input.line, input.column, accuracy_score(
+    def _predict(self, inp: Array) -> Float:
+        return Float(inp.line, inp.column, accuracy_score(
             self.labels_test,
             self.model.predict(self.features_test),
         ))

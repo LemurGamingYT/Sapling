@@ -2,7 +2,7 @@
 
 // Define variables like any other dynamic language
 x = 20
-y: int = 50 // y can only be an integer
+int y = 50 // y can only be an integer
 
 // Print out the variable
 print(x)
@@ -23,7 +23,7 @@ func test() {
 test()
 
 // Define a function that uses the '+' operator
-func test2(a: int, b: int) {
+func test2(int a, int b) {
     return a + b
 }
 
@@ -52,9 +52,9 @@ print(vec.y)
 print(vec.z)
 
 // Perform mathematical functions
-print(math.sine(10))
-print(math.cosine(270))
-print(math.round(5.6))
+print(Math.sine(10))
+print(Math.cosine(270))
+print(Math.round(5.6))
 
 // Create a function to run a thread on
 func thread_test() {
@@ -66,7 +66,7 @@ func thread_test() {
     print('Thread finished')
 }
 
-t = threads.thread(thread_test)
+t = Threads.thread(thread_test)
 print(t)
 t.run()
 
@@ -86,4 +86,3 @@ print(f)
 // Explore the attributes of the file class
 print(f.name)
 print(f.suffix)
-print(f.path)

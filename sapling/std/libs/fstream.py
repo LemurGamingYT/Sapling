@@ -6,9 +6,11 @@ from zlib import compress, decompress
 from pathlib import Path
 
 
-class file:
-    __name__ = 'file'
-    type = 'file'
+class File:
+    __name__ = 'File'
+    type = 'File'
+    
+    __slots__ = ('p', 'vm', 'pos')
     
     def __init__(self, p: Path, vm) -> None:
         self.p = p
@@ -17,7 +19,8 @@ class file:
         self.pos = vm.loose_pos
     
     def repr(self, _) -> str:
-        return f'file(\'{self.p}\')'
+        return f'File(\'{self.p}\')'
+
     
     @property
     def _name(self) -> String:
@@ -26,7 +29,7 @@ class file:
     @property
     def _suffix(self) -> String | Array:
         if len(self.p.suffixes) > 1:
-            return Array.from_py_list(self.p.suffixes, *self.pos)
+            return Array.from_py_iter(self.p.suffixes, *self.pos)
         
         return String(*self.pos, self.p.suffix)
     
@@ -35,7 +38,7 @@ class file:
         return String(*self.pos, self.p.as_posix())
     
     @property
-    def _parent(self) -> Class:
+    def _parent(self) -> String:
         return String(*self.pos, self.p.parent.as_posix())
     
     @property
@@ -81,7 +84,7 @@ class fstream:
     
     @call_decorator({'file': {'type': 'string'}})
     def _open(self, vm, f: String):
-        return Class.from_py_cls(file(Path(f.value), vm), f.line, f.column)
+        return Class.from_py_cls(File(Path(f.value), vm), f.line, f.column)
     
     @call_decorator({'file': {'type': 'string'}})
     def _compress(self, vm, f: String):

@@ -28,7 +28,9 @@ Index = namedtuple('Index', ['line', 'column', 'expr', 'item'])
 Call = namedtuple('Call', ['line', 'column', 'func', 'args'])
 BinaryOp = namedtuple('BinaryOp', ['line', 'column', 'op', 'left', 'right'])
 UnaryOp = namedtuple('UnaryOp', ['line', 'column', 'op', 'expr'])
-Attribute = namedtuple('Attribute', ['line', 'column', 'base', 'attr'])
+Attribute = namedtuple('Attribute', ['line', 'column', 'base', 'attr', 'null_safe'])
+New = namedtuple('New', ['line', 'column', 'name', 'args'])
+FuncExpr = namedtuple('FuncExpr', ['line', 'column', 'params', 'body'])
 
 Args = namedtuple('Args', ['line', 'column', 'args'])
 Arg = namedtuple('Arg', ['line', 'column', 'value'])
@@ -36,18 +38,23 @@ Arg = namedtuple('Arg', ['line', 'column', 'value'])
 Params = namedtuple('Params', ['line', 'column', 'params'])
 Param = namedtuple('Param', ['line', 'column', 'name', 'annotation', 'default'])
 
-Assign = namedtuple('Assign', ['line', 'column', 'name', 'value', 'constant', 'operation', 'type'])
+Assign = namedtuple('Assign', [
+    'line', 'column', 'name', 'value', 'constant', 'operation', 'type'
+])
 FuncDef = namedtuple('FuncDef', ['line', 'column', 'name', 'params', 'body'])
+AttrFuncDef = namedtuple('AttrFuncDef', [
+    'line', 'column', 'obj', 'name', 'params', 'body'
+])
 Struct = namedtuple('Struct', ['line', 'column', 'name', 'fields'])
 Enum = namedtuple('Enum', ['line', 'column', 'name', 'properties'])
 
-New = namedtuple('New', ['line', 'column', 'name', 'args'])
 SetSelf = namedtuple('SetSelf', ['line', 'column', 'name', 'value', 'class_name'])
 
 StructDefinition = namedtuple('StructDefinitions', ['line', 'column', 'name', 'type'])
 EnumDefinition = namedtuple('EnumDefinitions', ['line', 'column', 'name', 'value'])
 
 If = namedtuple('If', ['line', 'column', 'condition', 'then', 'otherwise'])
+Repeat = namedtuple('Repeat', ['line', 'column', 'body', 'condition'])
 While = namedtuple('While', ['line', 'column', 'condition', 'body'])
 Return = namedtuple('Return', ['line', 'column', 'value'])
 Import = namedtuple('Import', ['line', 'column', 'name'])

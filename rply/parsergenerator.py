@@ -195,24 +195,24 @@ class ParserGenerator(object):
             if self.cache_id is not None:
                 self._write_cache(cache_dir, cache_file, table)
 
-        if table.sr_conflicts:
-            warnings.warn(
-                "%d shift/reduce conflict%s" % (
-                    len(table.sr_conflicts),
-                    "s" if len(table.sr_conflicts) > 1 else ""
-                ),
-                ParserGeneratorWarning,
-                stacklevel=2,
-            )
-        if table.rr_conflicts:
-            warnings.warn(
-                "%d reduce/reduce conflict%s" % (
-                    len(table.rr_conflicts),
-                    "s" if len(table.rr_conflicts) > 1 else ""
-                ),
-                ParserGeneratorWarning,
-                stacklevel=2,
-            )
+        # if table.sr_conflicts:
+        #     warnings.warn(
+        #         "%d shift/reduce conflict%s" % (
+        #             len(table.sr_conflicts),
+        #             "s" if len(table.sr_conflicts) > 1 else ""
+        #         ),
+        #         ParserGeneratorWarning,
+        #         stacklevel=2,
+        #     )
+        # if table.rr_conflicts:
+        #     warnings.warn(
+        #         "%d reduce/reduce conflict%s" % (
+        #             len(table.rr_conflicts),
+        #             "s" if len(table.rr_conflicts) > 1 else ""
+        #         ),
+        #         ParserGeneratorWarning,
+        #         stacklevel=2,
+        #     )
         return LRParser(table, self.error_handler)
 
     def _write_cache(self, cache_dir, cache_file, table):

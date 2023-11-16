@@ -2,7 +2,7 @@
 parser.py
 ---------
 
-Parses the tokenized source code into bytecode to be ran by the Virtual Machine
+Parses the tokenized source code into bytecode to be run by the Virtual Machine
 
 """
 
@@ -15,11 +15,7 @@ from rply.lexer import LexerStream
 from rply.token import Token
 
 from sapling.constants import TOKENS, PRECEDENCE
-from sapling.codes import (
-    Code, Assign, FuncDef, If, While, Body, Arg, Args, Param, Params, Id, Int, String, Bool,
-    Nil, BinaryOp, Float, Array, Attribute, Call, UnaryOp, Continue, Import, Break, Return,
-    Regex, Hex, Struct, Enum, EnumDefinition, StructDefinition, ArrayComp, New, Index, Dictionary
-)
+from sapling.codes import *
 
 
 pg = ParserGenerator(TOKENS, PRECEDENCE)
@@ -52,11 +48,11 @@ expr = pg.production('stmt : expr')(lambda p: p[0])
 assign = pg.production('stmt : Id = expr')(
     lambda p: Assign(*get_pos(p[0]), p[0], p[2], False, '', 'any')
 )
-annotated_assign = pg.production('stmt : Id : Id = expr')(
-    lambda p: Assign(*get_pos(p[0]), p[0], p[4], False, '', p[2].getstr())
+annotated_assign = pg.production('stmt : Id Id = expr')(
+    lambda p: Assign(*get_pos(p[0]), p[1], p[3], False, '', p[0].getstr())
 )
-annotated_const_assign = pg.production('stmt : Const Id : Id = expr')(lambda p:
-    Assign(*get_pos(p[0]), p[1], p[4], True, '', p[3])
+annotated_const_assign = pg.production('stmt : Const Id Id = expr')(lambda p:
+    Assign(*get_pos(p[0]), p[1], p[3], True, '', p[2].getstr())
 )
 const_assign = pg.production('stmt : Const Id = expr')(lambda p:
     Assign(*get_pos(p[0]), p[1], p[3], True, '', 'any')
@@ -100,6 +96,26 @@ def func_def(p) -> FuncDef:
         p[5] if len(p) == 6 else p[4]
     )
 
+@pg.production('stmt : Func Id . Id ( ) body')
+@pg.production('stmt : Func Id . Id ( params ) body')
+def attr_func_def(p) -> AttrFuncDef:
+    """Handles an attribute function
+
+    Args:
+        p (list): The list of tokens provided by RPLY
+
+    Returns:
+        AttrFuncDef: The AttrFuncDef bytecode object
+    """
+    
+    return AttrFuncDef(
+        *get_pos(p[0]),
+        p[1].getstr(),
+        p[3].getstr(),
+        p[5] if len(p) == 8 else [],
+        p[7] if len(p) == 8 else p[6]
+    )
+
 
 if_stmt = pg.production('stmt : If expr body')(lambda p:
     If(*get_pos(p[0]), p[1], p[2], None)
@@ -112,6 +128,9 @@ while_stmt = pg.production('stmt : While expr body')(lambda p:
 )
 import_stmt = pg.production('stmt : Import String')(lambda p:
     Import(*get_pos(p[0]), p[1].getstr())
+)
+repeat_stmt = pg.production('stmt : Repeat body Until expr')(lambda p:
+    Repeat(*get_pos(p[0]), p[1], p[3])
 )
 continue_stmt = pg.production('stmt : Continue')(lambda p: Continue(*get_pos(p[0])))
 break_stmt = pg.production('stmt : Break')(lambda p: Break(*get_pos(p[0])))
@@ -195,13 +214,13 @@ def args(p) -> Args:
 param = pg.production('param : Id')(lambda p:
     Param(*get_pos(p[0]), p[0].getstr(), 'any', None)
 )
-annotated_param = pg.production('param : Id : Id')(lambda p:
-    Param(*get_pos(p[0]), p[0].getstr(), p[2].getstr(), None)
+annotated_param = pg.production('param : Id Id')(lambda p:
+    Param(*get_pos(p[0]), p[1].getstr(), p[0].getstr(), None)
 )
 
 
 @pg.production('param : Id = expr')
-@pg.production('param : Id : Id = expr')
+@pg.production('param : Id Id = expr')
 def default_param(p) -> Param:
     """Handles a default parameter (with or without annotation)
 
@@ -214,9 +233,9 @@ def default_param(p) -> Param:
 
     return Param(
         *get_pos(p[0]),
-        p[0].getstr(),
-        p[2].getstr() if len(p) == 5 else 'any',
-        p[4] if len(p) == 5 else None
+        p[1].getstr(),
+        p[0].getstr() if len(p) == 4 else 'any',
+        p[3] if len(p) == 4 else None
     )
 
 
@@ -249,14 +268,34 @@ def dictionary_items(p) -> dict:
     return {p[0]: p[2]} if len(p) == 3 else p[0] + {p[2]: p[4]}
 
 
-@pg.production('expr : Int')
-@pg.production('expr : Bool')
-@pg.production('expr : Nil')
-@pg.production('expr : Hex')
-@pg.production('expr : String')
-@pg.production('expr : Float')
-@pg.production('expr : Regex')
-@pg.production('expr : Id')
+@pg.production('attr : expr . Id')
+# @pg.production('attr : expr ? . Id')
+def attr(p) -> Attribute:
+    """Handles attributes
+
+    Args:
+        p (list): The list of tokens provided by RPLY
+
+    Returns:
+        Attribute: The Attribute object
+    """
+
+    return Attribute(
+        *get_pos(p[0]),
+        p[0],
+        f'_{p[2].getstr()}', # f'_{p[2].getstr()}' if len(p) == 3 else f'_{p[3].getstr()}',
+        False # len(p) == 4
+    )
+
+
+@pg.production('expr : Int', 'literal')
+@pg.production('expr : Bool', 'literal')
+@pg.production('expr : Nil', 'literal')
+@pg.production('expr : Hex', 'literal')
+@pg.production('expr : String', 'literal')
+@pg.production('expr : Float', 'literal')
+@pg.production('expr : Regex', 'literal')
+@pg.production('expr : Id', 'literal')
 def literal(p):
     """Handles a literal value (Integers, Floats, Nil, Booleans, Ids, Strings)
 
@@ -290,8 +329,8 @@ def literal(p):
         case 'Hex':
             return Hex(*pos, int(v))
 
-@pg.production('expr : { }')
-@pg.production('expr : { args }')
+@pg.production('expr : { }', 'literal')
+@pg.production('expr : { args }', 'literal')
 def array_literal(p) -> Array:
     """Handles array object definitions
 
@@ -304,7 +343,7 @@ def array_literal(p) -> Array:
 
     return Array(*get_pos(p[0]), p[1].args if len(p) == 3 else [])
 
-@pg.production('expr : { dictionary_items }')
+@pg.production('expr : { dictionary_items }', 'literal')
 def dictionary(p) -> Dictionary:
     """Handles dictionary object definitions
 
@@ -382,9 +421,8 @@ def call(p) -> Call:
 
     return Call(*get_pos(p[0]), p[0], p[2] if len(p) == 4 else [])
 
-attr = pg.production('expr : expr . Id')(lambda p:
-    Attribute(*get_pos(p[0]), p[0], f'_{p[2].getstr()}')
-)
+expr_attr = pg.production('expr : attr')(lambda p: p[0])
+
 index = pg.production('expr : expr [ expr ]')(lambda p:
     Index(*get_pos(p[0]), p[0], p[2])
 )
@@ -443,6 +481,7 @@ def parsing_error(e: ParsingError, tokens: LexerStream) -> NoReturn:
         print('SyntaxError: Unexpected EOF')
     else:
         print(src[pos.lineno - 1])
+        print(' ' * (pos.colno - 1) + '^')
         print(f'SyntaxError: Unexpected token \'{src[pos.lineno - 1][pos.colno - 1]}\'')
 
     sys_exit(1)

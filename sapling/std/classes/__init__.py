@@ -1,17 +1,17 @@
 from sapling.objects import Class
-from .runtime import runtime
-from .threads import threads
-from .parsers import parsers
-from .system import system
-from .math import math
-from .py import py
+from .runtime import Runtime
+from .threads import Threads
+from .parsers import Parsers
+from .system import System
+from .math import Math
+from .py import Py
 
 
 public_classes = {
-    'math': Class.from_py_cls(math, -1, -1),
-    'threads': Class.from_py_cls(threads, -1, -1),
-    'system': Class.from_py_cls(system, -1, -1),
-    'py': Class.from_py_cls(py, -1, -1),
-    'runtime': Class.from_py_cls(runtime, -1, -1),
-    'parsers': Class.from_py_cls(parsers, -1, -1),
+    'Math': Class.from_py_cls(Math, -1, -1),
+    'Threads': Class.from_py_cls(Threads, -1, -1),
+    'System': Class.from_py_cls(System, -1, -1),
+    'Py': Class.from_py_cls(Py, -1, -1),
+    'Runtime': Class.from_py_cls(Runtime, -1, -1),
+    'Parsers': Class.from_py_cls(Parsers, -1, -1),
 }

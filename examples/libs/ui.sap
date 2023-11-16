@@ -1,0 +1,8 @@
+import "ui"
+
+window = ui.create_window()
+
+label = ui.create_label(window)
+window.add_widget(label)
+
+window.run()

@@ -1,1 +1,15 @@
+struct User {
+    string name
+}
 
+func User.as_profile() {
+    print('User: ' + self.name)
+    print('Name: ' + self.name)
+}
+
+func User.to_string() {
+    return self.name
+}
+
+user = new User('Sapling')
+user.as_profile()

@@ -1,0 +1,5 @@
+// Import a local file
+import "examples/libs/local-test"
+
+// - is replaced by the VM with _
+print(local_test.x)

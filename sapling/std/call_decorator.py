@@ -36,6 +36,8 @@ def verify_params(vm, args: list[Arg], params: dict | list) -> list:
             if param.default is not None:
                 if isinstance(param.default, tuple):
                     new_args.append(param.default[0](*vm.loose_pos, param.default[1]))
+                elif callable(param.default):
+                    new_args.append(param.default(*vm.loose_pos))
                 else:
                     new_args.append(param.default)
     

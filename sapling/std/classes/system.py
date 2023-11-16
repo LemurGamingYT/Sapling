@@ -1,5 +1,5 @@
 from platform import architecture, machine, node, platform, processor, release, version
-from os import getcwd, getenv, putenv, unsetenv, cpu_count, system as shell
+from os import getcwd, getenv, cpu_count, system as shell
 
 from pyautogui import leftClick, rightClick, middleClick, keyDown, keyUp, moveTo
 from pyperclip import copy, paste
@@ -8,8 +8,8 @@ from sapling.std.call_decorator import call_decorator
 from sapling.objects import String, Array, Nil, Int
 
 
-class system:
-    type = 'system'
+class System:
+    type = 'System'
     
     @call_decorator({'command': {'type': 'string'}}, req_vm=False)
     def _shell(self, command: String):
@@ -63,8 +63,8 @@ class system:
         return String(*vm.loose_pos, getcwd())
     
     @call_decorator()
-    def _architecture(self, vm) -> String:
-        return Array.from_py_list(architecture(), *vm.loose_pos)
+    def _architecture(self, vm) -> Array:
+        return Array.from_py_iter(architecture(), *vm.loose_pos)
     
     @call_decorator()
     def _machine(self, vm) -> String:
@@ -91,7 +91,7 @@ class system:
         return String(*vm.loose_pos, version())
     
     @call_decorator({'name': {'type': 'string'}}, req_vm=False)
-    def _getenv(self, name: String) -> String:
+    def _getenv(self, name: String) -> String | Nil:
         if getenv(name.value) is None:
             return Nil(name.line, name.column)
         

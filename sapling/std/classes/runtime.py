@@ -1,22 +1,24 @@
 from sapling.std.call_decorator import call_decorator
 from sapling.objects import String, Nil, Array
-from argparse import Namespace
+from sapling.vmutils import get_bytecode
 
 
-class runtime:
-    type = 'runtime'
+class Runtime:
+    type = 'Runtime'
     
     @call_decorator({'code': {'type': 'string'}})
     def _execute_code(self, vm, code: String):
-        from main import get_file_bytecode, VM
+        from sapling.vm import VM
         
-        bytecode, src = get_file_bytecode(code.value, Namespace(compile=False))
-        new_vm = VM(src, vm.env)
+        bytecode = get_bytecode(code.value)
+        
+        new_vm = VM(code.value, vm.env)
         new_vm.run(bytecode)
+        
         return Nil(code.line, code.column)
     
-    class _env:
-        type = 'env'
+    class _Env:
+        type = 'Env'
         line = -1
         column = -1
         

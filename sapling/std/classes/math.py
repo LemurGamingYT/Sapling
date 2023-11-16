@@ -1,13 +1,13 @@
 from math import (
-    pi, e, sin, cos, tan, log, log10, log2, sqrt, ceil, floor, trunc, asin, acos, atan, atan2,
+    pi, e, sin, cos, tan, log, log10, log2, sqrt, ceil, floor, trunc,
     factorial, radians, degrees
 )
 from itertools import permutations
 from random import randint, choice
 from statistics import mean
 
-from sapling.std.call_decorator import call_decorator
 from sapling.objects import Int, Float, Array, String
+from sapling.std.call_decorator import call_decorator
 from sapling.error import STypeError
 
 
@@ -16,9 +16,9 @@ suffixes = [
     'Sxd', 'Spd', 'Ocd', 'Nod', 'Vg', 'UVg', 'TVg', 'QaVg', 'QiVg', 'SxVg', 'SpVg', 'OcVg', 'NVg'
 ]
 
-class math:
-    type = 'math'
-    
+class Math:
+    type = 'Math'
+
     _PI = Float(-1, -1, pi)
     _E = Float(-1, -1, e)
     
@@ -39,7 +39,7 @@ class math:
     
     @call_decorator({'array': {'type': 'array'}, 'r': {'type': 'int'}}, req_vm=False)
     def _permutations(self, array: Array, r: Int) -> Array:
-        return Array.from_py_list(
+        return Array.from_py_iter(
             [list(x) for x in permutations(array.value, r.value)],
             array.line,
             array.column
@@ -49,14 +49,16 @@ class math:
     def _factorial(self, x: Int) -> Int:
         return Int(x.line, x.column, factorial(x.value))
     
-    @call_decorator({'arg1': {'type': {'int', 'float'}}, 'arg2': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'arg1': {'type': {'int', 'float'}}, 'arg2': {'type': {'int', 'float'}}},
+                    req_vm=False)
     def _min(self, arg1: Int | Float, arg2: Int | Float) -> Int | Float:
         if arg1.type == 'float' or arg2.type == 'float':
             return Float(arg1.line, arg1.column, min(arg1.value, arg2.value))
 
         return Int(arg1.line, arg1.column, min(arg1.value, arg2.value))
     
-    @call_decorator({'arg1': {'type': {'int', 'float'}}, 'arg2': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'arg1': {'type': {'int', 'float'}}, 'arg2': {'type': {'int', 'float'}}},
+                    req_vm=False)
     def _max(self, arg1: Int | Float, arg2: Int | Float) -> Int | Float:
         if arg1.type == 'float' or arg2.type == 'float':
             return Float(arg1.line, arg1.column, max(arg1.value, arg2.value))
@@ -74,7 +76,7 @@ class math:
     @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
     def _sqrt(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, sqrt(x.value))
-    
+
     @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
     def _sine(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, sin(x.value))
@@ -88,7 +90,7 @@ class math:
         return Float(x.line, x.column, tan(x.value))
     
     @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
-    def _logorithm(self, x: Int | Float) -> Float:
+    def _logarithm(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, log(x.value))
     
     @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
@@ -98,22 +100,6 @@ class math:
     @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
     def _log10(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, log10(x.value))
-    
-    # @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
-    # def _asine(self, x: Int | Float) -> Float:
-    #     return Float(x.line, x.column, asin(x.value))
-    
-    # @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
-    # def _acosine(self, x: Int | Float) -> Float:
-    #     return Float(x.line, x.column, acos(x.value))
-    
-    # @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
-    # def _atangent(self, x: Int | Float) -> Float:
-    #     return Float(x.line, x.column, atan(x.value))
-    
-    # @call_decorator({'x': {'type': {'int', 'float'}, 'y': {'type': {'int', 'float'}}}}, req_vm=False)
-    # def _atangent2(self, x: Int | Float, y: Int | Float) -> Float:
-    #     return Float(x.line, x.column, atan2(x.value, y.value))
     
     @call_decorator({'x': {'type': 'int', 'y': {'type': 'int'}}}, req_vm=False)
     def _random_int(self, x: Int, y: Int) -> Int:

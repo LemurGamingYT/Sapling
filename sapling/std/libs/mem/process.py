@@ -5,9 +5,9 @@ from sapling.std.call_decorator import call_decorator
 from sapling.vmutils import py_to_sap
 
 
-class process:
-    __name__ = 'process'
-    type = 'process'
+class Process:
+    __name__ = 'Process'
+    type = 'Process'
     
     
     def __init__(self, vm, name: str | int):

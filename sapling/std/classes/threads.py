@@ -1,17 +1,17 @@
 from sapling.objects import Int, Class, Func, Nil, Array, String
+from threading import Thread as PyThread, active_count
 from sapling.std.call_decorator import call_decorator
-from threading import Thread, active_count
 
 
-class thread:
-    __name__ = 'thread'
-    type = 'thread'
+class Thread:
+    __name__ = 'Thread'
+    type = 'Thread'
     
     def repr(self, _) -> str:
-        return f'thread(target: {self.function_target.name})'
+        return f'Thread(target: {self.function_target.name})'
     
     def __init__(self, *args, **kwargs):
-        self.t = Thread(*args, **kwargs)
+        self.t = PyThread(*args, **kwargs)
         self.function_target: Func = kwargs.get('target')
     
     
@@ -21,8 +21,8 @@ class thread:
         return Nil(*vm.loose_pos)
 
 
-class threads:
-    type = 'threads'
+class Threads:
+    type = 'Threads'
     
     @call_decorator()
     def _active(self, vm):
@@ -34,4 +34,4 @@ class threads:
         'name': {'type': 'string', 'default': (String, '')},
     })
     def _thread(self, vm, f: Func, args: Array, name: String | Nil) -> Class:
-        return Class.from_py_cls(thread(target=f, args=(vm, args.value), name=name.value), f.line, f.column)
+        return Class.from_py_cls(Thread(target=f, args=(vm, args.value), name=name.value), f.line, f.column)

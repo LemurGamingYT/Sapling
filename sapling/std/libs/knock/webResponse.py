@@ -3,12 +3,12 @@ from requests import Response
 from sapling.objects import String, Int
 
 
-class webResponse:
-    __name__ = 'webResponse'
-    type = 'webResponse'
+class WebResponse:
+    __name__ = 'WebResponse'
+    type = 'WebResponse'
     
     def repr(self, _) -> str:
-        return f'webResponse(status: {self._status_code.value}, url: {self._url.value})'
+        return f'WebResponse(status: {self._status_code.value}, url: {self._url.value})'
     
     def __init__(self, response: Response) -> None:
         self._html = String(-1, -1, response.text)

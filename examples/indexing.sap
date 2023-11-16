@@ -1,5 +1,5 @@
 // Create a string to index
-s = "Hello world"
+string s = "Hello world"
 
 // Create an array to index
 arr = range(0, 50, 10)

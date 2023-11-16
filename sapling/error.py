@@ -14,8 +14,9 @@ from sys import exit as sys_exit
 class SError:
     """Base Sapling error class"""
 
-    def as_string(self) -> str:
-        """Unused by the Virtual Machine
+    @staticmethod
+    def as_string() -> str:
+        """Unused by the VM
 
         Returns:
             str: The representation of the error as a string
@@ -80,7 +81,7 @@ class SImportError(SError):
         self.pos = pos
 
     def report(self):
-        print(f'ImportError: {self.lib_name} library not found')
+        print(f'ImportError: \'{self.lib_name}\' library not found')
         sys_exit(1)
 
 

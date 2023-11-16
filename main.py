@@ -16,9 +16,8 @@ from argparse import ArgumentParser, Namespace
 from time import perf_counter
 from pathlib import Path
 
-from sapling.parser import parse
+from sapling.vmutils import get_bytecode
 from sapling.codes import Code
-from sapling.lexer import lex
 from sapling.vm import VM
 
 
@@ -34,8 +33,7 @@ def get_file_bytecode(fp: Path | str, a: Namespace) -> tuple[Code, str]:
     """
     
     source = fp.read_text('utf-8') if isinstance(fp, Path) else fp
-    tokens = lex(source)
-    bc = parse(tokens)
+    bc = get_bytecode(source)
 
     if a.compile:
         fp.with_suffix('.sapped').write_bytes(dumps(bc, HIGHEST_PROTOCOL))
@@ -65,16 +63,16 @@ def main(a: Namespace) -> tuple[Code, str | None]:
     return get_file_bytecode(fp, a)
 
 
-def run_vm(bytecode: Code, src: str):
+def run_vm(bc: Code, s: str):
     """Runs the bytecode on the Virtual Machine
 
     Args:
-        bytecode (Code): The bytecode 'Code' object
-        src (str): The source code
+        bc (Code): The bytecode 'Code' object
+        s (str): The source code
     """
 
-    vm = VM(src)
-    vm.run(bytecode)
+    vm = VM(s)
+    vm.run(bc)
 
 
 if __name__ == '__main__':

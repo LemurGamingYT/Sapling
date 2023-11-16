@@ -21,13 +21,15 @@ TOKENS = {
     'Enum': r'enum',
     'Const': r'const',
     'New': r'new',
+    'Repeat': r'repeat',
+    'Until': r'until',
 
     'Float': r'\d+\.\d+',
     'Int': r'\d+',
-    'String': r'"[^"]*"|\'[^\']*\'',
+    'String': r'".*?"|\'.*?\'',
     'Hex': r'0x[0-9a-fA-F]+',
     'Bool': r'true|false',
-    'Regex': r'`[^`]*`',
+    'Regex': r'`.*?`',
     'Nil': r'nil',
     'Id': r'\w+',
     
@@ -72,5 +74,6 @@ PRECEDENCE = [
     ('left', ('.',)),
     ('left', ('=',)),
     ('right', ('func_assignment',)),
-    ('left', ('func_call',)),
+    ('right', ('func_call',)),
+    ('left', ('literal',)),
 ]

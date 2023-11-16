@@ -6,7 +6,7 @@
  A bytecode VM made in Python
 
 
-## How to run
+### How to run
 There are two ways to run Sapling.
 
 1. Use the .exe file

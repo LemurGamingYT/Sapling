@@ -6,19 +6,19 @@ The main VM class for executing Sapling bytecode
 """
 
 from operator import add, sub, mul, truediv, mod, eq, ne, gt, lt, ge, le
-from typing import NoReturn, Callable
-from re import compile as re_compile
 from sys import exit as sys_exit
 from contextlib import suppress
 from collections import deque
+from typing import NoReturn
 from types import NoneType
+from pathlib import Path
 
 import sapling.codes as codes
 from sapling.error import (
-    STypeError, SRuntimeError, SImportError, SNameError, SError, SAttributeError, SIndexError
+    STypeError, SRuntimeError, SImportError, SNameError, SError, SIndexError
 )
 from sapling.std import public_funcs, public_classes, public_libs
-from sapling.vmutils import Caller, Arg
+from sapling.vmutils import Caller, Arg, get_bytecode
 from sapling.objects import *
 
 
@@ -40,7 +40,7 @@ class VM:
     }
 
     call_stack: deque[Caller] = deque([])
-    loose_pos: list[list[int]] = []
+    loose_pos: list[int, int] = []
 
     def __init__(self, src: str, parent_env: dict = None):
         self.env = public_funcs | public_classes
@@ -50,17 +50,34 @@ class VM:
         self.src = src
 
     def import_module(self, name: str):
-        """Imports the library given. Uses the 'public_libs' from the std py module
+        """Imports the library given. Uses the 'public_libs' from the std py module.
+        It also attempts to find it in the local directories, this comes first before the std.
 
         Args:
             name (str): Module/Library name
         """
 
-        l = public_libs.get(name[1:-1])
+        s = name[1:-1]
+        p = Path(f'{s}.sap')
+        if p.exists():
+            s = p.stem.replace('-', '_')
+            bc = get_bytecode(p.read_text())
+
+            file_vm = VM(p.read_text(), self.env)
+            file_vm.run(bc)
+
+            self.env[s] = Lib(
+                *self.loose_pos,
+                s,
+                {f'_{k}': v.value if isinstance(v, Var) else v for k, v in file_vm.env.items()}
+            )
+            return
+
+        l = public_libs.get(s)
         if l is not None:
-            self.env[name[1:-1]] = Lib.from_py(l, *self.loose_pos)
+            self.env[s] = Lib.from_py(l, *self.loose_pos)
         else:
-            self.error(SImportError(name, self.loose_pos))
+            self.error(SImportError(s, self.loose_pos))
 
     def error(self, error: SError | str) -> NoReturn:
         """Raises an error
@@ -73,12 +90,12 @@ class VM:
         # for call in reversed(self.call_stack):
         #     print(f' - {call.name.name}')
 
-        if self.src is not None:
-            with suppress(IndexError):
-                print(self.src.splitlines()[error.pos[0] - 1])
-                print(' ' * (error.pos[1] - 1) + '^')
+        if issubclass(type(error), SError):
+            if self.src is not None:
+                with suppress(IndexError):
+                    print(self.src.splitlines()[error.pos[0] - 1])
+                    print(' ' * (error.pos[1] - 1) + '^')
 
-        if issubclass(error.__class__, SError):
             error.report()
         else:
             print(error)
@@ -96,54 +113,54 @@ class VM:
             self.loose_pos = [instruction.line, instruction.column]
             self.execute(instruction)
 
-    def _execute_body(self, instruction: codes.Body):
+    def execute_body(self, instruction: codes.Body):
         for stmt in instruction.stmts:
             out = self.execute(stmt)
             if isinstance(stmt, (codes.Break, codes.Return, codes.Continue)):
                 return out
 
-    _execute_args = lambda self, instruction: [self.execute(arg) for arg in instruction.args]
-    _execute_arg = lambda self, instruction: Arg(self.execute(instruction.value))
+    execute_args = lambda self, instruction: [self.execute(arg) for arg in instruction.args]
+    execute_arg = lambda self, instruction: Arg(self.execute(instruction.value))
     
-    _execute_params = lambda self, instruction: [self.execute(param) for param in instruction.params]
-    _execute_param = lambda self, instruction: Param(
+    execute_params = lambda self, instruction: [self.execute(param) for param in instruction.params]
+    execute_param = lambda self, instruction: Param(
         instruction.name,
         instruction.annotation,
         self.execute(instruction.default)
     )
     
-    _execute_nil = lambda _, instruction: Nil(instruction.line, instruction.column)
-    _execute_bool = lambda _, instruction: Bool(
+    execute_nil = lambda _, instruction: Nil(instruction.line, instruction.column)
+    execute_bool = lambda _, instruction: Bool(
         instruction.line, instruction.column, instruction.value
     )
-    _execute_string = lambda _, instruction: String(
+    execute_string = lambda _, instruction: String(
         instruction.line, instruction.column, instruction.value
     )
-    _execute_regex = lambda _, instruction: Regex(
+    execute_regex = lambda _, instruction: Regex(
         instruction.line, instruction.column, re_compile(instruction.value)
     )
-    _execute_hex = lambda _, instruction: Hex(
+    execute_hex = lambda _, instruction: Hex(
         instruction.line, instruction.column, instruction.value
     )
-    _execute_int = lambda _, instruction: Int(
+    execute_int = lambda _, instruction: Int(
         instruction.line, instruction.column, instruction.value
     )
-    _execute_float = lambda _, instruction: Float(
+    execute_float = lambda _, instruction: Float(
         instruction.line, instruction.column, instruction.value
     )
-    _execute_array = lambda self, instruction: Array(
+    execute_array = lambda self, instruction: Array(
         instruction.line, instruction.column,
         [self.execute(value).value for value in instruction.value]
     )
     
-    def _execute_dictionary(self, instruction: codes.Dictionary):
+    def execute_dictionary(self, instruction: codes.Dictionary):
         return Dictionary(
             instruction.line, instruction.column,
             {self.execute(key): self.execute(value)
             for key, value in instruction.value.items()}
         )
     
-    def _execute_arrcomp(self, instruction: codes.ArrayComp):
+    def execute_arrcomp(self, instruction: codes.ArrayComp):
         arr = self.execute(instruction.arr)
         if arr.type != 'array':
             return self.error(STypeError('Expected \'array\' for array comprehension',
@@ -155,22 +172,22 @@ class VM:
                 codes.Return(instruction.expr.line, instruction.expr.column, instruction.expr)
             ])
         )
-        return Array(
-            arr.line,
-            arr.column,
-            map(lambda val: f(self, [Arg(val)]), arr.value)
-        )
 
-    def _execute_call(self, instruction: codes.Call):
+        return Array.from_py_iter(map(
+            lambda val: f(self, [Arg(val)]), arr.value
+        ), arr.line, arr.column)
+
+    def execute_call(self, instruction: codes.Call):
         func = self.execute(instruction.func)
         if not callable(func):
-            return self.error(STypeError(f'\'{func.type}\' is not callable', [func.line, func.column]))
+            return self.error(STypeError(f'\'{func.type}\' is not callable',
+                                         [func.line, func.column]))
         
         args = self.execute(instruction.args) if instruction.args else []
         self.call_stack.appendleft(Caller(func))
         return func(self, args)
 
-    def _execute_id(self, instruction: codes.Id):
+    def execute_id(self, instruction: codes.Id):
         if self.env.get(instruction.value) is not None:
             v = self.env[instruction.value]
             if isinstance(self.env[instruction.value], Var):
@@ -184,7 +201,7 @@ class VM:
 
         self.error(SNameError(instruction.value, [instruction.line, instruction.column]))
 
-    def _execute_assign(self, instruction: codes.Assign):
+    def execute_assign(self, instruction: codes.Assign):
         value = self.execute(instruction.value)
 
         if instruction.operation != '':
@@ -220,13 +237,13 @@ class VM:
             instruction.constant
         )
 
-    def _execute_func(self, instruction: codes.FuncDef):
+    def execute_func(self, instruction: codes.FuncDef):
         name = instruction.name.value
         params = self.execute(instruction.params) if instruction.params else []
 
         self.env[name] = Func(instruction.line, instruction.column, name, params, instruction.body)
     
-    def _execute_enum(self, instruction: codes.Enum):
+    def execute_enum(self, instruction: codes.Enum):
         enum = Class(
             instruction.line,
             instruction.column,
@@ -236,18 +253,18 @@ class VM:
 
         self.env[enum.name] = enum
     
-    def _execute_struct(self, instruction: codes.Struct):
+    def execute_struct(self, instruction: codes.Struct):
         ln, col = instruction.line, instruction.column
         init = Func(
             ln,
             col,
             '_init',
-            [Param(field.name, field.type) for field in instruction.fields],
+            [Param(prop.name, prop.type) for prop in instruction.fields],
             Body(ln, col, [
-                codes.SetSelf(field.line, field.column, field.name, codes.Id(
-                    field.line, field.column, field.name
+                codes.SetSelf(prop.line, prop.column, prop.name, codes.Id(
+                    prop.line, prop.column, prop.name
                 ), instruction.name)
-                for field in instruction.fields
+                for prop in instruction.fields
             ])
         )
         
@@ -262,7 +279,7 @@ class VM:
         
         self.env[struct.name] = struct
     
-    def _execute_new(self, instruction: codes.New):
+    def execute_new(self, instruction: codes.New):
         c = self.execute(instruction.name)
         if c is None:
             self.error(SNameError(instruction.name, [instruction.line, instruction.column]))
@@ -275,46 +292,53 @@ class VM:
         
         return c
 
-    def _execute_if(self, instruction: codes.If):
+    def execute_if(self, instruction: codes.If):
         if self.execute(instruction.condition):
             self.execute(instruction.then)
         elif instruction.otherwise is not None:
             self.execute(instruction.otherwise)
 
-    def _execute_while(self, instruction: codes.While):
+    def execute_while(self, instruction: codes.While):
         while self.execute(instruction.condition):
             self.execute(instruction.body)
     
-    _execute_import = lambda self, instruction: self.import_module(instruction.name)
+    execute_import = lambda self, instruction: self.import_module(instruction.name)
     
-    _execute_return = lambda self, instruction: self.execute(instruction.value)
+    execute_return = lambda self, instruction: self.execute(instruction.value)
 
-    def _execute_binaryop(self, instruction: codes.BinaryOp):
+    def execute_repeat(self, instruction: codes.Repeat):
+        while not self.execute(instruction.condition):
+            self.execute(instruction.body)
+
+    def execute_binaryop(self, instruction: codes.BinaryOp):
         left = self.execute(instruction.left)
         right = self.execute(instruction.right)
 
         try:
             out = self.operators[instruction.op](left, right)
         except TypeError:
-            self._operator_error(left, instruction.op, right, [left.line, left.column])
+            return self.operator_error(left, instruction.op, right, [left.line, left.column])
         except ZeroDivisionError:
-            self.error(STypeError('Cannot divide by zero', self.loose_pos))
+            return self.error(STypeError('Cannot divide by zero', self.loose_pos))
 
         if out is None:
-            self._operator_error(left, instruction.op, right, [left.line, left.column])
+            self.operator_error(left, instruction.op, right, [left.line, left.column])
 
         return out
 
-    def _execute_attribute(self, instruction: codes.Attribute):
+    def execute_attribute(self, instruction: codes.Attribute):
         base = self.execute(instruction.base)
         attr = instruction.attr
 
+        if instruction.null_safe and base.type == 'nil':
+            return Nil(base.line, base.column)
+
         try:
             return getattr(base, attr)
-        except AttributeError:
+        except (AttributeError, KeyError):
             self.error(SAttributeError(base.type, attr[1:], [base.line, base.column]))
     
-    def _execute_setself(self, instruction: codes.SetSelf):
+    def execute_setself(self, instruction: codes.SetSelf):
         c = self.env.get(instruction.class_name)
         if c is None:
             self.error(SNameError(instruction.class_name, [instruction.line, instruction.column]))
@@ -324,7 +348,7 @@ class VM:
 
         c.objects[f'_{instruction.name}'] = self.execute(instruction.value)
     
-    def _execute_index(self, instruction: codes.Index):
+    def execute_index(self, instruction: codes.Index):
         expr = self.execute(instruction.expr)
         item = self.execute(instruction.item)
         
@@ -337,7 +361,30 @@ class VM:
         except IndexError:
             self.error(SIndexError(f'Index out of range \'{item}\'', [expr.line, expr.column]))
     
-    _no_handler = lambda _, instruction: None
+    def execute_attr_func(self, instruction: codes.AttrFuncDef):
+        c = self.env.get(instruction.obj)
+        if c is None:
+            self.error(SNameError(instruction.obj, [instruction.line, instruction.column]))
+        
+        if not isinstance(c, Class):
+            self.error(STypeError(
+                f'Cannot set function \'{c.name}\' on \'{c.type}\'',
+                [c.line, c.column]
+            ))
+        
+        name = instruction.name
+        f = Method(
+            instruction.line,
+            instruction.column,
+            name,
+            self.execute(instruction.params) if instruction.params else [],
+            instruction.body,
+            parent_cls=c
+        )
+
+        self.env[c.name].objects[f'_{f.name}'] = f
+    
+    no_handler = lambda _, instruction: None
 
     def execute(self, instruction):
         """
@@ -353,41 +400,43 @@ class VM:
 
 
     instruction_handlers = {
-        codes.Call: _execute_call,
-        codes.Id: _execute_id,
-        codes.Args: _execute_args,
-        codes.Arg: _execute_arg,
-        codes.Assign: _execute_assign,
-        codes.Nil: _execute_nil,
-        codes.Bool: _execute_bool,
-        codes.String: _execute_string,
-        codes.Int: _execute_int,
-        codes.Float: _execute_float,
-        codes.BinaryOp: _execute_binaryop,
-        codes.If: _execute_if,
-        codes.Body: _execute_body,
-        codes.Array: _execute_array,
-        codes.Attribute: _execute_attribute,
-        codes.While: _execute_while,
-        codes.FuncDef: _execute_func,
-        codes.Param: _execute_param,
-        codes.Params: _execute_params,
-        codes.Return: _execute_return,
-        codes.Import: _execute_import,
-        codes.Regex: _execute_regex,
-        codes.Hex: _execute_hex,
-        codes.Enum: _execute_enum,
-        codes.ArrayComp: _execute_arrcomp,
-        codes.Struct: _execute_struct,
-        codes.New: _execute_new,
-        codes.SetSelf: _execute_setself,
-        NoneType: _no_handler,
-        codes.Index: _execute_index,
-        codes.Dictionary: _execute_dictionary
+        codes.Call: execute_call,
+        codes.Id: execute_id,
+        codes.Args: execute_args,
+        codes.Arg: execute_arg,
+        codes.Assign: execute_assign,
+        codes.Nil: execute_nil,
+        codes.Bool: execute_bool,
+        codes.String: execute_string,
+        codes.Int: execute_int,
+        codes.Float: execute_float,
+        codes.BinaryOp: execute_binaryop,
+        codes.If: execute_if,
+        codes.Body: execute_body,
+        codes.Array: execute_array,
+        codes.Attribute: execute_attribute,
+        codes.While: execute_while,
+        codes.FuncDef: execute_func,
+        codes.Param: execute_param,
+        codes.Params: execute_params,
+        codes.Return: execute_return,
+        codes.Import: execute_import,
+        codes.Regex: execute_regex,
+        codes.Hex: execute_hex,
+        codes.Enum: execute_enum,
+        codes.ArrayComp: execute_arrcomp,
+        codes.Struct: execute_struct,
+        codes.New: execute_new,
+        codes.SetSelf: execute_setself,
+        NoneType: no_handler,
+        codes.Index: execute_index,
+        codes.Dictionary: execute_dictionary,
+        codes.AttrFuncDef: execute_attr_func,
+        codes.Repeat: execute_repeat
     }
 
 
-    _operator_error = lambda self, left, op, right, pos: self.error(
+    operator_error = lambda self, left, op, right, pos: self.error(
         STypeError(f'Operator \'{op}\' cannot be applied to \'{left.type}\' and \'{right.type}\'',
                    pos)
     )

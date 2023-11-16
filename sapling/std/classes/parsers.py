@@ -6,13 +6,13 @@ from sapling.objects import Dictionary, String, Nil
 from sapling.error import SFileError, STypeError
 
 
-class parsers:
-    type = 'parsers'
+class Parsers:
+    type = 'Parsers'
     
-    class _json:
+    class _Json:
         line = -1
         column = -1
-        type = 'jsonParser'
+        type = 'JsonParser'
         
         @staticmethod
         def repr(_) -> str:
@@ -26,7 +26,7 @@ class parsers:
             elif not f.exists():
                 vm.error(SFileError(file.value, vm.loose_pos))
             elif f.is_dir():
-                vm.error(STypeError(f'\'{file.value}\' is not a file'))
+                vm.error(STypeError(f'\'{file.value}\' is not a file', vm.loose_pos))
         
         @call_decorator({'file': {'type': 'string'}, 'content': {'type': 'dictionary'}})
         def _write(self, vm, file: String, content: Dictionary) -> Nil:
@@ -38,6 +38,6 @@ class parsers:
             elif not path.exists():
                 vm.error(SFileError(file.value, vm.loose_pos))
             elif path.is_dir():
-                vm.error(STypeError(f'\'{file.value}\' is not a file'))
+                vm.error(STypeError(f'\'{file.value}\' is not a file', vm.loose_pos))
             
             return Nil(*vm.loose_pos)
