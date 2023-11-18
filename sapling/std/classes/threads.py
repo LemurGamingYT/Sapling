@@ -1,5 +1,6 @@
-from sapling.objects import Int, Class, Func, Nil, Array, String
 from threading import Thread as PyThread, active_count
+
+from sapling.objects import Int, Class, Func, Nil, Array, String
 from sapling.std.call_decorator import call_decorator
 
 

@@ -147,6 +147,12 @@ class Int(Node):
 
     def __bool__(self) -> bool:
         return self.value > 0
+    
+    def __str__(self) -> str:
+        return str(self.value)
+    
+    def __float__(self) -> float:
+        return float(self.value)
 
 
 @dataclass(unsafe_hash=True, slots=True)
@@ -237,6 +243,12 @@ class Float(Node):
 
     def __bool__(self) -> bool:
         return self.value > 0.0
+    
+    def __int__(self) -> int:
+        return int(self.value)
+
+    def __str__(self) -> str:
+        return str(self.value)
 
 
 @dataclass(unsafe_hash=True, slots=True)
@@ -356,6 +368,12 @@ class String(Node):
 
     def __bool__(self) -> bool:
         return self.value != ''
+    
+    def __int__(self) -> int:
+        return int(self.value)
+    
+    def __float__(self) -> float:
+        return float(self.value)
 
     def __len__(self) -> int:
         return len(self.value)

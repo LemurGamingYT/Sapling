@@ -1,6 +1,8 @@
 # Changelog
 ---
 
+### v0.1.2.1
+- Fix cast functions
 ### v0.1.2
 - Struct/Attr Function Definitions
 - Repeat Statement

@@ -67,6 +67,9 @@ def _range(start: Int, end: Int, increment: Int) -> Array:
 @call_decorator({'obj': {}}, is_attr=False)
 def _to_int(vm, obj: Node) -> Int:
     try:
+        if int(obj).__class__ != int:
+            invalid_cast_type(vm, 'int')
+        
         return Int(obj.line, obj.column, int(obj))
     except ValueError:
         invalid_cast_type(vm, 'int')
@@ -74,6 +77,9 @@ def _to_int(vm, obj: Node) -> Int:
 @call_decorator({'obj': {}}, is_attr=False)
 def _to_float(vm, obj: Node) -> Float:
     try:
+        if float(obj).__class__ != float:
+            invalid_cast_type(vm, 'float')
+        
         return Float(obj.line, obj.column, float(obj))
     except ValueError:
         invalid_cast_type(vm, 'float')
@@ -81,6 +87,9 @@ def _to_float(vm, obj: Node) -> Float:
 @call_decorator({'obj': {}}, is_attr=False)
 def _to_string(vm, obj: Node) -> String:
     try:
+        if str(obj).__class__ != str:
+            invalid_cast_type(vm, 'string')
+        
         return String(obj.line, obj.column, str(obj))
     except ValueError:
         invalid_cast_type(vm, 'string')
@@ -88,6 +97,9 @@ def _to_string(vm, obj: Node) -> String:
 @call_decorator({'obj': {}}, is_attr=False)
 def _to_bool(vm, obj: Node) -> Bool:
     try:
+        if bool(obj).__class__ != bool:
+            invalid_cast_type(vm, 'bool')
+        
         return Bool(obj.line, obj.column, bool(obj))
     except ValueError:
         invalid_cast_type(vm, 'bool')
