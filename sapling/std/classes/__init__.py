@@ -1,4 +1,5 @@
 from sapling.objects import Class
+from .unicode import Unicode
 from .runtime import Runtime
 from .threads import Threads
 from .parsers import Parsers
@@ -14,4 +15,5 @@ public_classes = {
     'Py': Class.from_py_cls(Py, -1, -1),
     'Runtime': Class.from_py_cls(Runtime, -1, -1),
     'Parsers': Class.from_py_cls(Parsers, -1, -1),
+    'Unicode': Class.from_py_cls(Unicode, -1, -1)
 }

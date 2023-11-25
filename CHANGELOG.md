@@ -1,6 +1,9 @@
 # Changelog
 ---
 
+### v0.1.2.2
+- Starts with a main function (if a main function exists)
+- Bug fixes
 ### v0.1.2.1
 - Fix cast functions
 ### v0.1.2

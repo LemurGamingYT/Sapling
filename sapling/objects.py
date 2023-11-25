@@ -11,8 +11,8 @@ from pickle import HIGHEST_PROTOCOL, dumps, loads
 from re import Pattern, compile as re_compile
 from dataclasses import dataclass, field
 
-from sapling.std.call_decorator import call_decorator, verify_params
-from sapling.vmutils import Param, py_to_sap, sap_to_py
+from sapling.vmutils import Param, py_to_sap, sap_to_py, verify_params
+from sapling.std.call_decorator import call_decorator
 from sapling.error import SAttributeError
 from sapling.codes import Body
 
@@ -836,7 +836,6 @@ class Func(Node):
             return self.func(vm, args)
         elif self.body is not None:
             from sapling.vm import VM
-
             if not isinstance(vm, VM):
                 parent_cls = vm
                 vm = args[0]

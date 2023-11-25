@@ -40,40 +40,42 @@ def invalid_cast_type(vm, t: str):
     vm.error(STypeError(f'Invalid cast type \'{t}\'', vm.loose_pos))
 
 
-def verify_args(vm, args: list[Arg], params: list[Param]) -> list:
+def verify_params(vm, args: list[Arg], params: list[Param]) -> list:
     new_args = []
     z = zip(args, params)
     for arg, param in z:
         param_type = param.type
-        arg_type = arg.value.type
-        if isinstance(param_type, str) and param_type != 'any' and arg_type != param_type:
+        arg_value_type = arg.value.type
+        if isinstance(param_type, str) and param_type != 'any' and arg_value_type != param_type:
             vm.error(STypeError(
-                    f'Expected \'{param_type}\' but got \'{arg_type}\'',
-                    [arg.value.line, arg.value.column]
-                )
-            )
-        elif isinstance(param_type, set) and 'any' not in param_type and arg_type not in param_type:
-            vm.error(STypeError(
-                f'Expected \'{param_type}\' but got \'{arg_type}\'',
+                f'Expected \'{param_type}\' but got \'{arg_value_type}\'',
                 [arg.value.line, arg.value.column]
             ))
+        elif isinstance(param_type, set):
+            if 'any' not in param_type and arg_value_type not in param_type:
+                vm.error(STypeError(
+                    f'Expected \'{param_type}\' but got \'{arg_value_type}\'',
+                    [arg.value.line, arg.value.column]
+                ))
 
         new_args.append(arg.value)
 
     if len(new_args) < len(params):
-        for param in params:
+        for param in params.values() if isinstance(params, dict) else params:
             if param.default is not None:
                 if isinstance(param.default, tuple):
                     new_args.append(param.default[0](*vm.loose_pos, param.default[1]))
+                elif callable(param.default):
+                    new_args.append(param.default(*vm.loose_pos))
                 else:
                     new_args.append(param.default)
-
-    if len(params) < len(new_args) > len(params):
+    
+    if len(new_args) < len(params) or len(new_args) > len(params):
         vm.error(STypeError(f'Expected {len(params)} arguments, got {len(new_args)}', [
             args[0].value.line,
             args[0].value.column
         ]))
-
+    
     return new_args
 
 

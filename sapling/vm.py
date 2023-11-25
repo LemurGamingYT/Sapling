@@ -11,6 +11,7 @@ from contextlib import suppress
 from collections import deque
 from typing import NoReturn
 from types import NoneType
+from pickle import loads
 from pathlib import Path
 
 import sapling.codes as codes
@@ -58,14 +59,24 @@ class VM:
         """
 
         s = name[1:-1]
-        p = Path(f'{s}.sap')
-        if p.exists():
-            s = p.stem.replace('-', '_')
-            bc = get_bytecode(p.read_text())
+        if Path(f'{s}.sap').exists():
+            src = Path(f'{s}.sap').read_text()
+            s = Path(f'{s}.sap').stem.replace('-', '_')
+            bc = get_bytecode(src)
 
-            file_vm = VM(p.read_text(), self.env)
+            file_vm = VM(src, self.env)
             file_vm.run(bc)
 
+            self.env[s] = Lib(
+                *self.loose_pos,
+                s,
+                {f'_{k}': v.value if isinstance(v, Var) else v for k, v in file_vm.env.items()}
+            )
+            return
+        elif Path(f'{s}.sapped').exists():
+            file_vm = VM(None, self.env)
+            file_vm.run(loads(Path(f'{s}.sapped').read_bytes()))
+            
             self.env[s] = Lib(
                 *self.loose_pos,
                 s,
@@ -109,6 +120,19 @@ class VM:
         """
 
         bytecode = code.stmts
+        has_main_function = tuple(filter(
+            lambda x: isinstance(x, codes.FuncDef) and x.name.value == 'main', bytecode
+        ))
+        
+        if has_main_function:
+            f = has_main_function[0]
+            self.loose_pos = [f.line, f.column]
+            self.execute_func(f)
+            self.execute_call(codes.Call(f.line, f.column, f.name, codes.Args(
+                *self.loose_pos,
+                []
+            )))
+        
         for instruction in bytecode:
             self.loose_pos = [instruction.line, instruction.column]
             self.execute(instruction)
@@ -119,10 +143,10 @@ class VM:
             if isinstance(stmt, (codes.Break, codes.Return, codes.Continue)):
                 return out
 
-    execute_args = lambda self, instruction: [self.execute(arg) for arg in instruction.args]
+    execute_args = lambda self, instruction: [self.execute_arg(arg) for arg in instruction.args]
     execute_arg = lambda self, instruction: Arg(self.execute(instruction.value))
     
-    execute_params = lambda self, instruction: [self.execute(param) for param in instruction.params]
+    execute_params = lambda self, instruction: [self.execute_param(param) for param in instruction.params]
     execute_param = lambda self, instruction: Param(
         instruction.name,
         instruction.annotation,
@@ -183,8 +207,9 @@ class VM:
             return self.error(STypeError(f'\'{func.type}\' is not callable',
                                          [func.line, func.column]))
         
-        args = self.execute(instruction.args) if instruction.args else []
+        args = self.execute_args(instruction.args) if instruction.args else []
         self.call_stack.appendleft(Caller(func))
+        
         return func(self, args)
 
     def execute_id(self, instruction: codes.Id):
@@ -239,7 +264,7 @@ class VM:
 
     def execute_func(self, instruction: codes.FuncDef):
         name = instruction.name.value
-        params = self.execute(instruction.params) if instruction.params else []
+        params = self.execute_params(instruction.params) if instruction.params else []
 
         self.env[name] = Func(instruction.line, instruction.column, name, params, instruction.body)
     
@@ -280,7 +305,7 @@ class VM:
         self.env[struct.name] = struct
     
     def execute_new(self, instruction: codes.New):
-        c = self.execute(instruction.name)
+        c = self.execute_id(instruction.name)
         if c is None:
             self.error(SNameError(instruction.name, [instruction.line, instruction.column]))
         
@@ -288,19 +313,19 @@ class VM:
             self.error(STypeError(f'Cannot instantiate \'{c.type}\'', [c.line, c.column]))
         
         if '_init' in c.objects:
-            c.objects['_init'](self, self.execute(instruction.args) if instruction.args else [])
+            c.objects['_init'](self, self.execute_args(instruction.args) if instruction.args else [])
         
         return c
 
     def execute_if(self, instruction: codes.If):
         if self.execute(instruction.condition):
-            self.execute(instruction.then)
+            self.execute_body(instruction.then)
         elif instruction.otherwise is not None:
-            self.execute(instruction.otherwise)
+            self.execute_body(instruction.otherwise)
 
     def execute_while(self, instruction: codes.While):
         while self.execute(instruction.condition):
-            self.execute(instruction.body)
+            self.execute_body(instruction.body)
     
     execute_import = lambda self, instruction: self.import_module(instruction.name)
     
@@ -308,7 +333,7 @@ class VM:
 
     def execute_repeat(self, instruction: codes.Repeat):
         while not self.execute(instruction.condition):
-            self.execute(instruction.body)
+            self.execute_body(instruction.body)
 
     def execute_binaryop(self, instruction: codes.BinaryOp):
         left = self.execute(instruction.left)
@@ -377,7 +402,7 @@ class VM:
             instruction.line,
             instruction.column,
             name,
-            self.execute(instruction.params) if instruction.params else [],
+            self.execute_params(instruction.params) if instruction.params else [],
             instruction.body,
             parent_cls=c
         )

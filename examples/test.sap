@@ -1,1 +1,7 @@
-print(to_int(10.92))
+func test() {
+    print("Hello world!")
+    i = 0
+    print(i)
+}
+
+Threads.thread(test).run()

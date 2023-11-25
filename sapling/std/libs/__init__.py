@@ -1,3 +1,4 @@
+from .networking import networking
 # from .bytecode import bytecode
 from .fstream import fstream
 from .knock import knock
@@ -9,6 +10,7 @@ from .ui import ui
 
 
 public_libs = {
+    'networking': networking,
     # 'bytecode': bytecode,
     'fstream': fstream,
     'knock': knock,
