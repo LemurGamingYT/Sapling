@@ -1,6 +1,7 @@
 from .networking import networking
 # from .bytecode import bytecode
 from .fstream import fstream
+from .sound import sound
 from .knock import knock
 from .time import time
 from .sapX import sapX
@@ -13,6 +14,7 @@ public_libs = {
     'networking': networking,
     # 'bytecode': bytecode,
     'fstream': fstream,
+    'sound': sound,
     'knock': knock,
     'time': time,
     'sapX': sapX,

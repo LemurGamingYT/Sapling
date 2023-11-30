@@ -1,0 +1,13 @@
+// Create a function to run a thread on
+func thread_test() {
+    i = 0
+    while i < 1000000 {
+        i = i + 1
+    }
+
+    print('Thread finished')
+}
+
+t = Threads.thread(thread_test)
+print(t)
+t.run()

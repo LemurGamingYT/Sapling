@@ -1,0 +1,17 @@
+// Perform mathematical functions
+print(Math.sine(10))
+print(Math.cosine(270))
+print(Math.round(5.6))
+
+// Simplify a big number
+print(Math.snum(100000))
+
+// Math Constants
+print(Math.PI)
+print(Math.E)
+
+// Use max and min
+x = Math.max(Math.min(25, 50), 0)
+
+// Create a random number
+print(Math.random_int(x, 500))

@@ -28,6 +28,21 @@ get_pos = lambda rule: [rule.source_pos.lineno, rule.source_pos.colno]\
 empty = pg.production('code :')(lambda _: Code(0, 0, []))
 code = pg.production('code : stmts')(lambda p: Code(0, 0, p[0]))
 
+
+# @pg.production('type : attr')
+# def type_def(p) -> Type:
+#     """Handles a type definition
+#
+#     Args:
+#         p (list): The list of tokens provided by RPLY
+#
+#     Returns:
+#         Type: The Type definition bytecode object
+#     """
+#
+#     return Type(p[0])
+
+
 @pg.production('stmts : stmt')
 @pg.production('stmts : stmts stmt')
 def stmts(p) -> list:
@@ -117,6 +132,7 @@ def attr_func_def(p) -> AttrFuncDef:
     )
 
 
+# TODO: if-elif-else stmt
 if_stmt = pg.production('stmt : If expr body')(lambda p:
     If(*get_pos(p[0]), p[1], p[2], None)
 )
@@ -126,9 +142,25 @@ if_else_stmt = pg.production('stmt : If expr body Else body')(lambda p:
 while_stmt = pg.production('stmt : While expr body')(lambda p:
     While(*get_pos(p[0]), p[1], p[2])
 )
-import_stmt = pg.production('stmt : Import String')(lambda p:
-    Import(*get_pos(p[0]), p[1].getstr())
-)
+
+@pg.production('stmt : Import String')
+@pg.production('stmt : Import import_list From String')
+def import_stmt(p) -> Import:
+    """Handles an import of statements
+
+    Args:
+        p (list): The list of tokens provided by RPLY
+
+    Returns:
+        Import: The Import bytecode object
+    """
+
+    return Import(
+        *get_pos(p[0]),
+        p[1].getstr() if len(p) == 2 else p[1],
+        p[3].getstr() if len(p) == 4 else None
+    )
+
 repeat_stmt = pg.production('stmt : Repeat body Until expr')(lambda p:
     Repeat(*get_pos(p[0]), p[1], p[3])
 )
@@ -191,6 +223,21 @@ def body(p) -> Body:
     """
 
     return Body(*get_pos(p[0]), p[1] if len(p) == 3 else [])
+
+
+@pg.production('import_list : String')
+@pg.production('import_list : import_list , String')
+def import_list(p) -> list:
+    """Handles a single or multiple arguments
+
+    Args:
+        p (list): The list of tokens provided by RPLY
+
+    Returns:
+        list: The list of strings to be imported
+    """
+
+    return [p[0].getstr()] if len(p) == 1 else p[0] + [p[2].getstr()]
 
 
 arg = pg.production('arg : expr')(lambda p: Arg(*get_pos(p[0]), p[0]))
@@ -288,14 +335,14 @@ def attr(p) -> Attribute:
     )
 
 
-@pg.production('expr : Int', 'literal')
-@pg.production('expr : Bool', 'literal')
-@pg.production('expr : Nil', 'literal')
-@pg.production('expr : Hex', 'literal')
-@pg.production('expr : String', 'literal')
-@pg.production('expr : Float', 'literal')
-@pg.production('expr : Regex', 'literal')
-@pg.production('expr : Id', 'literal')
+@pg.production('expr : Int')
+@pg.production('expr : Bool')
+@pg.production('expr : Nil')
+@pg.production('expr : Hex')
+@pg.production('expr : String')
+@pg.production('expr : Float')
+@pg.production('expr : Regex')
+@pg.production('expr : Id')
 def literal(p):
     """Handles a literal value (Integers, Floats, Nil, Booleans, Ids, Strings)
 
@@ -329,8 +376,8 @@ def literal(p):
         case 'Hex':
             return Hex(*pos, int(v))
 
-@pg.production('expr : { }', 'literal')
-@pg.production('expr : { args }', 'literal')
+@pg.production('expr : { }')
+@pg.production('expr : { args }')
 def array_literal(p) -> Array:
     """Handles array object definitions
 
@@ -343,7 +390,7 @@ def array_literal(p) -> Array:
 
     return Array(*get_pos(p[0]), p[1].args if len(p) == 3 else [])
 
-@pg.production('expr : { dictionary_items }', 'literal')
+@pg.production('expr : { dictionary_items }')
 def dictionary(p) -> Dictionary:
     """Handles dictionary object definitions
 
@@ -403,12 +450,26 @@ def relational_op(p) -> BinaryOp:
 
     return BinaryOp(*get_pos(p[0]), p[1].gettokentype(), p[0], p[2])
 
+@pg.production('expr : expr AND expr')
+@pg.production('expr : expr OR expr')
+def logical_op(p) -> BinaryOp:
+    """Handles logical operations
+
+    Args:
+        p (list): The list of tokens provided by RPLY
+
+    Returns:
+        BinaryOp: The Binary Operation bytecode object
+    """
+
+    return BinaryOp(*get_pos(p[0]), p[1].gettokentype(), p[0], p[2])
+
 unary_op = pg.production('expr : ! expr')(lambda p:
     UnaryOp(*get_pos(p[0]), p[0].gettokentype(), p[1])
 )
 
-@pg.production('expr : expr ( )', 'func_call')
-@pg.production('expr : expr ( args )', 'func_call')
+@pg.production('expr : expr ( )')
+@pg.production('expr : expr ( args )')
 def call(p) -> Call:
     """Handles function calls
 
@@ -441,7 +502,7 @@ def new(p) -> New:
     
     return New(*get_pos(p[0]), p[1], p[3] if len(p) == 5 else [])
 
-array_comp = pg.production('expr : { expr : Id <- expr }')(lambda p:
+array_comp = pg.production('expr : { expr : Id In expr }')(lambda p:
     ArrayComp(*get_pos(p[0]), p[1], p[3].getstr(), p[5])
 )
 

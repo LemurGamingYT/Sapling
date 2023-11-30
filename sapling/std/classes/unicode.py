@@ -5,6 +5,21 @@ from sapling.error import STypeError
 
 class Unicode:
     type = 'Unicode'
+    
+    
+    _SYMBOL_SPARKLES = String(-1, -1, '✨')
+    _SYMBOL_CHECK_MARK = String(-1, -1, '✅')
+    _SYMBOL_FIRE = String(-1, -1, '🔥')
+    _SYMBOL_SKULL = String(-1, -1, '💀')
+    _SYMBOL_SNOWFLAKE = String(-1, -1, '❄️')
+    _SYMBOL_PARTY_POPPER = String(-1, -1, '🎉')
+    _SYMBOL_WARNING = String(-1, -1, '⚠️')
+    _SYMBOL_STAR = String(-1, -1, '🌟')
+    _SYMBOL_THUMBS_UP = String(-1, -1, '👍')
+    _SYMBOL_ROCKET = String(-1, -1, '🚀')
+    _SYMBOL_CHRISTMAS_TREE = String(-1, -1, '🎄')
+    _SYMBOL_PRESENT = String(-1, -1, '🎁')
+    _SYMBOL_SMILEY = String(-1, -1, '😊')
 
 
     @call_decorator({'char': {'type': {'string', 'strbytes'}}})
@@ -61,3 +76,7 @@ class Unicode:
     @call_decorator({'s': {'type': 'string'}})
     def _is_ascii(self, vm, s: String) -> Bool:
         return Bool(vm.loose_pos.line, vm.loose_pos.column, s.value.isascii())
+    
+    @call_decorator({'s': {'type': 'string'}})
+    def _order_alphabet(self, vm, s: String) -> String:
+        return String(*vm.loose_pos, ''.join(sorted(s.value)))

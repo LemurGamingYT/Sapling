@@ -11,10 +11,6 @@ print(x)
 print("HELLO".lower())
 print(y.to_hex())
 
-// Create an array comprehension
-z = {i : i <- range(0, 20)} // Use the range function to get all numbers from 0 - 19
-print(z)
-
 // Define a function
 func test() {
     print("Hello world!")
@@ -69,6 +65,10 @@ func thread_test() {
 t = Threads.thread(thread_test)
 print(t)
 t.run()
+
+// Create an array comprehension
+z = {i : i in range(0, 20)} // Use the range function to get all numbers from 0 - 19
+print(z)
 
 // Import the knock http library
 import "knock"

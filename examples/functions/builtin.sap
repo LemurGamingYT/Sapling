@@ -6,3 +6,6 @@ print(type(505))
 
 // 'attrs' is a builtin function that returns an array of the attributes of the object given
 print(attrs('Str'))
+
+// 'to_string' is a builtin function that returns the object as a string
+print(type(to_string(100)))

@@ -1,0 +1,12 @@
+// Define two bits from strings
+bit1 = Bits.to_bit('01110011')
+bit2 = Bits.to_bit('11011100')
+
+// Perform bit operations on the bits
+print(Bits.bit_and(bit1, bit2))
+print(Bits.bit_or(bit1, bit2))
+print(Bits.bit_xor(bit1, bit2))
+print(Bits.bit_not(bit1))
+print(Bits.bit_not(bit2))
+
+// print(Bits.bit_left_shift(bit1, bit2)) // Overflow error

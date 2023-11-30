@@ -1,6 +1,8 @@
+from pickle import dumps, loads, HIGHEST_PROTOCOL
 from types import MethodType
+from getpass import getpass
 
-from sapling.objects import Nil, Int, String, Node, Func, Array, Float, Bool
+from sapling.objects import Nil, Int, String, Node, Func, Array, Float, Bool, Class, StrBytes
 from sapling.vmutils import py_to_sap, Param, invalid_cast_type
 from sapling.std.call_decorator import call_decorator
 from sapling.error import STypeError, SAttributeError
@@ -104,6 +106,26 @@ def _to_bool(vm, obj: Node) -> Bool:
     except ValueError:
         invalid_cast_type(vm, 'bool')
 
+@call_decorator({'prompt': {'type': 'string', 'default': (String, '')}}, req_vm=False, is_attr=False)
+def _input(prompt: String) -> String:
+    return String(prompt.line, prompt.column, getpass(prompt.value))
+
+@call_decorator({'obj': {}}, req_vm=False, is_attr=False)
+def _is_callable(obj: Node) -> Bool:
+    return Bool(obj.line, obj.column, callable(obj))
+
+@call_decorator({'obj': {}}, req_vm=False, is_attr=False)
+def _is_class(obj: Node) -> Bool:
+    return Bool(obj.line, obj.column, isinstance(obj, Class))
+
+@call_decorator({'obj': {}}, req_vm=False, is_attr=False)
+def _serialize(obj: Node) -> StrBytes:
+    return StrBytes(obj.line, obj.column, dumps(obj, HIGHEST_PROTOCOL))
+
+@call_decorator({'bytes': {'type': 'strbytes'}}, req_vm=False, is_attr=False)
+def _deserialize(b: StrBytes) -> Node:
+    return loads(b.value)
+
 
 # @call_decorator({'obj': {}}, is_attr=False)
 # def _object_position(vm, obj: Node):
@@ -126,5 +148,10 @@ public_funcs = {
     'to_int': Func(-1, -1, 'to_int', _to_int.params, func=_to_int),
     'to_float': Func(-1, -1, 'to_float', _to_float.params, func=_to_float),
     'to_string': Func(-1, -1, 'to_string', _to_string.params, func=_to_string),
-    'to_bool': Func(-1, -1, 'to_bool', _to_bool.params, func=_to_bool)
+    'to_bool': Func(-1, -1, 'to_bool', _to_bool.params, func=_to_bool),
+    'input': Func(-1, -1, 'input', _input.params, func=_input),
+    'is_callable': Func(-1, -1, 'is_callable', _is_callable.params, func=_is_callable),
+    'is_class': Func(-1, -1, 'is_class', _is_class.params, func=_is_class),
+    'serialize': Func(-1, -1, 'serialize', _serialize.params, func=_serialize),
+    'deserialize': Func(-1, -1, 'deserialize', _deserialize.params, func=_deserialize),
 }

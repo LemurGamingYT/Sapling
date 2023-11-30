@@ -1,0 +1,18 @@
+x = 10
+y = 50
+z = "hello world"
+
+print(x + y) // Addition int + int
+print(x - y) // Subtraction int - int
+print(x * y) // Multiplication int * int
+print(y / x) // Division int / int
+print(z * x) // Multiplication string * int
+print(z + " 5 times") // Addition string + string (concatenation)
+print(x % 5) // Modulo int % int
+print(x == 10) // Equal to int == int
+print(x != y) // Not equal to int != int
+print(y > x) // Greater than int > int
+print(x < 5) // Less than int < int
+print(x * y * y) // Multiplication int * int * int
+print(x >= 1000) // Greater than or equal to int >= int
+print(x <= 5) // Less than or equal to int <= int

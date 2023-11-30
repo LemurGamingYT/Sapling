@@ -7,11 +7,10 @@ Contains all the object classes used by the VM
 """
 
 from typing import Callable, Self, Iterable, AnyStr, Union
-from pickle import HIGHEST_PROTOCOL, dumps, loads
 from re import Pattern, compile as re_compile
 from dataclasses import dataclass, field
 
-from sapling.vmutils import Param, py_to_sap, sap_to_py, verify_params
+from sapling.vmutils import Param, py_to_sap, sap_to_py, verify_params, Arg
 from sapling.std.call_decorator import call_decorator
 from sapling.error import SAttributeError
 from sapling.codes import Body
@@ -50,15 +49,19 @@ class Int(Node):
 
     @call_decorator(req_vm=False)
     def _to_hex(self) -> 'String':
-        return String(self.line, self.column, hex(self.value))
+        return String(self.line, self.column, hex(self.value)[2:].upper())
 
     @call_decorator(req_vm=False)
     def _to_octal(self) -> 'String':
         return String(self.line, self.column, oct(self.value))
 
     @call_decorator(req_vm=False)
-    def _from_bin(self) -> 'String':
-        return String(self.line, self.column, bin(self.value))
+    def _to_binary(self) -> 'String':
+        return String(self.line, self.column, bin(self.value)[2:])
+    
+    @call_decorator(req_vm=False)
+    def _is_negative(self) -> 'Bool':
+        return Bool(self.line, self.column, self.value < 0)
 
 
     def __add__(self, other):
@@ -401,14 +404,6 @@ class StrBytes(String):
     def _to_string(self) -> String:
         return String(self.line, self.column, self.value.decode('utf-8'))
 
-    @call_decorator(req_vm=False)
-    def _encrypt(self) -> Self:
-        return StrBytes(self.line, self.column, dumps(self.value, HIGHEST_PROTOCOL))
-
-    @call_decorator(req_vm=False)
-    def _decrypt(self) -> Self:
-        return StrBytes(self.line, self.column, loads(self.value))
-
 
     def __add__(self, other):
         match other.type:
@@ -678,6 +673,12 @@ class Array(Node):
     @call_decorator({'value': {}}, req_vm=False)
     def _has(self, value: Node) -> Bool:
         return Bool(self.line, self.column, value in self.value)
+    
+    @call_decorator({'func': {'type': 'func'}})
+    def _map(self, vm, func: 'Func') -> Self:
+        return Array(self.line, self.column, map(
+            lambda v: func(vm, [Arg(v)]), self.value
+        ))
 
     
     def __hash__(self):
@@ -828,7 +829,7 @@ class Func(Node):
     
     @call_decorator({'args': {'type': 'array', 'default': (Array, [])}})
     def _call(self, vm, args: Array) -> Node:
-        return self(vm, args.value)
+        return self(vm, [Arg(arg) for arg in args])
 
 
     def __call__(self, vm, args):
@@ -908,7 +909,7 @@ class Class(Node):
             Self: The Sapling Class
         """
 
-        return Class(line, column, py_cls.__name__, {
+        return Class(line, column, py_cls.__class__.__name__, {
             name: py_to_sap(getattr(py_cls, name), line, column)
             for name in dir(py_cls)
             if not name.startswith('__') and name.startswith('_')

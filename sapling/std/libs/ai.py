@@ -1,7 +1,8 @@
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
+from sklearn.pipeline import Pipeline
 
 from sapling.std.call_decorator import call_decorator
 from sapling.objects import Array, Float, Class
@@ -12,16 +13,14 @@ class model:
     type = 'model'
     
     def __init__(self, dataset: list, labels: list) -> None:
-        self.cv = CountVectorizer()
-        features = self.cv.fit_transform(dataset)
+        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(dataset, labels, test_size=0.2)
         
-        features_train, self.features_test, labels_train, self.labels_test = train_test_split(
-            features, labels, test_size=0.2, random_state=42
-        )
+        self.model = Pipeline([
+            ('tfidf', TfidfVectorizer()),
+            ('clf', LogisticRegression())
+        ])
         
-        self.model = MultinomialNB()
-        self.model.fit(features_train, labels_train)
-        
+        self.model.fit(self.x_train, self.y_train)
 
     @staticmethod
     def repr(_) -> str:
@@ -30,10 +29,9 @@ class model:
     
     @call_decorator({'input': {'type': 'array'}}, req_vm=False)
     def _predict(self, inp: Array) -> Float:
-        return Float(inp.line, inp.column, accuracy_score(
-            self.labels_test,
-            self.model.predict(self.features_test),
-        ))
+        y_pred = self.model.predict(self.x_train)
+        accuracy = accuracy_score(self.y_test, y_pred)
+        return Float(inp.line, inp.column, accuracy)
 
 
 class ai:

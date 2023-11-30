@@ -9,6 +9,7 @@ Contains utility functions used while the VM is running
 from dataclasses import dataclass, field
 from collections import namedtuple
 
+# from .cverify_params import verify_params
 from sapling.error import STypeError
 from sapling.parser import parse
 from sapling.codes import Code
@@ -40,42 +41,44 @@ def invalid_cast_type(vm, t: str):
     vm.error(STypeError(f'Invalid cast type \'{t}\'', vm.loose_pos))
 
 
-def verify_params(vm, args: list[Arg], params: list[Param]) -> list:
-    new_args = []
+def verify_params(vm, args: list[Arg], params: list[Param]):
     z = zip(args, params)
+    new_args = []
+    
     for arg, param in z:
         param_type = param.type
-        arg_value_type = arg.value.type
+        arg_value = arg.value
+        arg_value_type = arg_value.type
         if isinstance(param_type, str) and param_type != 'any' and arg_value_type != param_type:
             vm.error(STypeError(
                 f'Expected \'{param_type}\' but got \'{arg_value_type}\'',
-                [arg.value.line, arg.value.column]
+                [arg_value.line, arg_value.column]
             ))
-        elif isinstance(param_type, set):
-            if 'any' not in param_type and arg_value_type not in param_type:
-                vm.error(STypeError(
-                    f'Expected \'{param_type}\' but got \'{arg_value_type}\'',
-                    [arg.value.line, arg.value.column]
-                ))
+        elif isinstance(param_type, set) and 'any' not in param_type and arg_value_type not in param_type:
+            vm.error(STypeError(
+                f'Expected \'{param_type}\' but got \'{arg_value_type}\'',
+                [arg_value.line, arg_value.column]
+            ))
 
-        new_args.append(arg.value)
+        new_args.append(arg_value)
 
     if len(new_args) < len(params):
-        for param in params.values() if isinstance(params, dict) else params:
-            if param.default is not None:
-                if isinstance(param.default, tuple):
-                    new_args.append(param.default[0](*vm.loose_pos, param.default[1]))
-                elif callable(param.default):
-                    new_args.append(param.default(*vm.loose_pos))
+        for param in params:
+            default = param.default
+            if default is not None:
+                if isinstance(default, tuple):
+                    new_args.append(default[0](*vm.loose_pos, default[1]))
+                elif callable(default):
+                    new_args.append(default(*vm.loose_pos))
                 else:
-                    new_args.append(param.default)
-    
-    if len(new_args) < len(params) or len(new_args) > len(params):
+                    new_args.append(default)
+
+    if len(new_args) != len(params):
         vm.error(STypeError(f'Expected {len(params)} arguments, got {len(new_args)}', [
             args[0].value.line,
             args[0].value.column
         ]))
-    
+
     return new_args
 
 
@@ -91,7 +94,7 @@ def py_to_sap(value, line: int, column: int, **kwargs):
         Node/object: The Sapling Node/object equivalent of the python object
     """
 
-    from sapling.objects import Nil, Array, Regex, String, Int, Float, Bool, Func, Method
+    from sapling.objects import Nil, Array, Regex, String, Int, Float, Bool, Func, Method, Dictionary
     py_to_sap_map = {
         'str': String,
         'bool': Bool,
@@ -109,6 +112,8 @@ def py_to_sap(value, line: int, column: int, **kwargs):
     match value.__class__.__name__:
         case 'list':
             return Array.from_py_iter(value, line, column)
+        case 'dict':
+            return Dictionary.from_py_dict(value, line, column)
         case 'function':
             return Func(line, column, value.__name__, value.params, func=value, **kwargs)
         case 'method':
@@ -132,6 +137,8 @@ def sap_to_py(value):
             return value.value
         case 'Array':
             return value.to_py_list()
+        case 'Dictionary':
+            return value.to_py_dict()
         case 'Func' | 'Method':
             return value.func
 

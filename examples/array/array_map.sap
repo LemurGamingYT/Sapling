@@ -1,0 +1,6 @@
+func m(val) {
+    return val * 10
+}
+
+arr = range(0, 100, 10)
+print(arr.map(m))

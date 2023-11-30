@@ -1,0 +1,7 @@
+// Define an integer test
+x = 100
+
+// Repeat the code block until the 'until' condition is met
+repeat {
+    x -= 1
+} until x == 0

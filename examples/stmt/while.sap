@@ -1,0 +1,8 @@
+// Define an integer test
+x = 100
+
+// While the condition is true, run the code block
+while x > 0 {
+    print(x)
+    x -= 1
+}

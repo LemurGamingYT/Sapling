@@ -9,3 +9,5 @@ print(f)
 print(f.name)
 print(f.suffix)
 print(f.path)
+
+f.write("Some text")

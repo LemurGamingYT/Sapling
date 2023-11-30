@@ -4,3 +4,26 @@ func main() {
 }
 
 main()
+
+// Parameters of functions work like any other language
+func test(x, y, z) {
+    print(x + y + z)
+}
+
+test(5, 5, 5)
+
+// Parameters can also be annotated
+func test2(int x, string y) {
+    return y * x
+}
+
+print(test2(5, 'Hi! '))
+// print(test2('Im not going to give you an integer!', 9)) // TypeError: Expected 'int' but got 'string'
+
+// Parameters can also have a default parameter
+func test3(int x = 5) {
+    print(x)
+}
+
+test3() // prints 5
+test3(10) // prints 10

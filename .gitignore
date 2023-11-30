@@ -2,3 +2,5 @@
 .vscode/
 __pycache__
 .idea/
+.pyx
+.pyd

@@ -13,16 +13,9 @@ from sys import exit as sys_exit
 
 class SError:
     """Base Sapling error class"""
-
-    @staticmethod
-    def as_string() -> str:
-        """Unused by the VM
-
-        Returns:
-            str: The representation of the error as a string
-        """
-
-        return 'SError()'
+    
+    def __init__(self, pos: list):
+        self.pos = pos
 
     def report(self):
         """The report error method
@@ -125,4 +118,30 @@ class SRuntimeError(SError):
 
     def report(self):
         print(f'RuntimeError: {self.msg}')
+        sys_exit(1)
+
+
+class SOverflowError(SError):
+    """The overflow error class used when an overflow occurs"""
+
+    def __init__(self, msg: str, pos: list):
+        self.msg = msg
+        
+        self.pos = pos
+
+    def report(self):
+        print(f'OverflowError: {self.msg}')
+        sys_exit(1)
+
+
+class SDecodeError(SError):
+    """The decode error class used when an error occurs during decoding"""
+
+    def __init__(self, msg: str, pos: list):
+        self.msg = msg
+
+        self.pos = pos
+
+    def report(self):
+        print(f'DecodeError: {self.msg}')
         sys_exit(1)

@@ -75,6 +75,16 @@ def run_vm(bc: Code, s: str):
     vm.run(bc)
 
 
+def run_benchmark(name: str):
+    """Run a benchmark
+
+    Args:
+        name (str): Benchmark name
+    """
+    
+    exec(f'import benchmark.cython.benchmark_{name}')
+
+
 if __name__ == '__main__':
     arg_parser = ArgumentParser(description='Sapling bytecode VM')
     arg_parser.add_argument('file', type=Path, help='The file (or directory) to run')
@@ -84,9 +94,14 @@ if __name__ == '__main__':
                             help='Print the time taken to run the bytecode')
     arg_parser.add_argument('-test', '--run-tests', action='store_true',
                             help='Run the sapling example files')
+    arg_parser.add_argument('-bench', '--run-benchmarks', required=False, help='Run a benchmark')
     args = arg_parser.parse_args()
 
     start = perf_counter()
+    
+    if args.run_benchmarks:
+        run_benchmark(args.run_benchmarks)
+        sys_exit(0)
 
     if args.run_tests:
         for f in Path('examples').rglob('*.sap'):

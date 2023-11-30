@@ -1,0 +1,13 @@
+// Write to test.csv
+file = "test.csv"
+Parsers.Csv.write(file, {{"Eve", 35, "France"}})
+
+// Print out the contents of test.csv
+print(Parsers.Csv.parse(file))
+
+// Write to test.json
+file2 = "test.json"
+Parsers.Json.write(file2, {"test": 10})
+
+// Print out the contents of test.json
+print(Parsers.Json.parse(file2))

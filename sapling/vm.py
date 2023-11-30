@@ -5,21 +5,22 @@ vm.py
 The main VM class for executing Sapling bytecode
 """
 
-from operator import add, sub, mul, truediv, mod, eq, ne, gt, lt, ge, le
+from operator import add, sub, mul, truediv, mod, eq, ne, gt, lt, ge, le, and_, or_
+from typing import NoReturn, Callable
+from re import compile as re_compile
 from sys import exit as sys_exit
 from contextlib import suppress
 from collections import deque
-from typing import NoReturn
 from types import NoneType
 from pickle import loads
 from pathlib import Path
 
 import sapling.codes as codes
 from sapling.error import (
-    STypeError, SRuntimeError, SImportError, SNameError, SError, SIndexError
+    STypeError, SRuntimeError, SImportError, SNameError, SError, SIndexError, SAttributeError
 )
 from sapling.std import public_funcs, public_classes, public_libs
-from sapling.vmutils import Caller, Arg, get_bytecode
+from sapling.vmutils import Caller, Arg, get_bytecode, Param
 from sapling.objects import *
 
 
@@ -37,7 +38,9 @@ class VM:
         '>': gt,
         '<': lt,
         '>=': ge,
-        '<=': le
+        '<=': le,
+        'AND': and_,
+        'OR': or_
     }
 
     call_stack: deque[Caller] = deque([])
@@ -50,12 +53,21 @@ class VM:
 
         self.src = src
 
-    def import_module(self, name: str):
+    def import_names(self, attrs: dict, names: list) -> None:
+        """Function for the import_module function. Imports all the names into the env."""
+
+        for n in names:
+            if f'_{n[1:-1]}' in attrs:
+                n = n[1:-1]
+                self.env[n] = attrs[f'_{n}']
+
+    def import_module(self, name: str | list, from_: bool | None):
         """Imports the library given. Uses the 'public_libs' from the std py module.
         It also attempts to find it in the local directories, this comes first before the std.
 
         Args:
-            name (str): Module/Library name
+            name (str | list): Module/Library name(s)
+            from_ (str | None): Module/Library name to import names from
         """
 
         s = name[1:-1]
@@ -67,26 +79,42 @@ class VM:
             file_vm = VM(src, self.env)
             file_vm.run(bc)
 
-            self.env[s] = Lib(
-                *self.loose_pos,
-                s,
-                {f'_{k}': v.value if isinstance(v, Var) else v for k, v in file_vm.env.items()}
-            )
+            attrs = {f'_{k}': v.value if isinstance(v, Var) else v for k, v in file_vm.env.items()}
+            if from_:
+                self.import_names(attrs, name)
+            else:
+                self.env[s] = Lib(
+                    *self.loose_pos,
+                    s,
+                    attrs
+                )
+
             return
         elif Path(f'{s}.sapped').exists():
             file_vm = VM(None, self.env)
             file_vm.run(loads(Path(f'{s}.sapped').read_bytes()))
-            
-            self.env[s] = Lib(
-                *self.loose_pos,
-                s,
-                {f'_{k}': v.value if isinstance(v, Var) else v for k, v in file_vm.env.items()}
-            )
+
+            attrs = {f'_{k}': v.value if isinstance(v, Var) else v for k, v in file_vm.env.items()}
+            if from_:
+                self.import_names(attrs, name)
+            else:
+                self.env[s] = Lib(
+                    *self.loose_pos,
+                    s,
+                    attrs
+                )
+
             return
 
-        l = public_libs.get(s)
-        if l is not None:
-            self.env[s] = Lib.from_py(l, *self.loose_pos)
+        if from_:
+            s = from_[1:-1]
+
+        lib = public_libs.get(s)
+        if lib is not None:
+            if from_:
+                self.import_names(lib.__dict__, name)
+            else:
+                self.env[s] = Lib.from_py(lib, *self.loose_pos)
         else:
             self.error(SImportError(s, self.loose_pos))
 
@@ -192,7 +220,7 @@ class VM:
             ))
 
         f = Func(instruction.line, instruction.column, '_arrcomp',
-            [Param(instruction.ident)], Body(instruction.expr.line, instruction.expr.column, [
+            [Param(instruction.ident)], codes.Body(instruction.expr.line, instruction.expr.column, [
                 codes.Return(instruction.expr.line, instruction.expr.column, instruction.expr)
             ])
         )
@@ -209,7 +237,7 @@ class VM:
         
         args = self.execute_args(instruction.args) if instruction.args else []
         self.call_stack.appendleft(Caller(func))
-        
+
         return func(self, args)
 
     def execute_id(self, instruction: codes.Id):
@@ -285,7 +313,7 @@ class VM:
             col,
             '_init',
             [Param(prop.name, prop.type) for prop in instruction.fields],
-            Body(ln, col, [
+            codes.Body(ln, col, [
                 codes.SetSelf(prop.line, prop.column, prop.name, codes.Id(
                     prop.line, prop.column, prop.name
                 ), instruction.name)
@@ -327,7 +355,7 @@ class VM:
         while self.execute(instruction.condition):
             self.execute_body(instruction.body)
     
-    execute_import = lambda self, instruction: self.import_module(instruction.name)
+    execute_import = lambda self, instruction: self.import_module(instruction.name, instruction.from_)
     
     execute_return = lambda self, instruction: self.execute(instruction.value)
 

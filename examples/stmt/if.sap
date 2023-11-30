@@ -1,0 +1,9 @@
+// Define a boolean as true
+x = true
+
+// If the condition is true, run the code block
+if x {
+    print(x)
+} else {
+    print("false")
+}

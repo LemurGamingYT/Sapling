@@ -1,13 +1,13 @@
-from sapling.objects import String, Class, Array, Nil
+from sapling.objects import String, Class, Array, Nil, StrBytes
 from sapling.std.call_decorator import call_decorator
 from sapling.error import SFileError, STypeError
 
 from zlib import compress, decompress
+from contextlib import suppress
 from pathlib import Path
 
 
 class File:
-    __name__ = 'File'
     type = 'File'
     
     __slots__ = ('p', 'vm', 'pos')
@@ -45,16 +45,28 @@ class File:
     def _contents(self) -> String:
         if not self.p.exists():
             return String(*self.pos, '')
-        
-        return String(*self.pos, self.p.read_text('utf-8'))
+
+        with suppress(UnicodeDecodeError):
+            return String(*self.pos, self.p.read_text('utf-8'))
+
+    @property
+    def _byte_contents(self) -> StrBytes:
+        if not self.p.exists():
+            return StrBytes(*self.pos, ''.encode('utf-8'))
+
+        return StrBytes(*self.pos, self.p.read_bytes())
     
     
-    @call_decorator({'contents': {'type': 'string'}}, req_vm=False)
-    def _write(self, content: String):
+    @call_decorator({'contents': {'type': {'string', 'strbytes'}}}, req_vm=False)
+    def _write(self, content: String | StrBytes):
         if not self.p.exists():
             return String(*self.pos, '')
-        
-        self.p.write_text(content.value, 'utf-8')
+
+        if content.type == 'string':
+            self.p.write_text(content.value, 'utf-8')
+        elif content.type == 'strbytes':
+            self.p.write_bytes(content.value)
+
         return Nil(*self.pos)
     
     @call_decorator(req_vm=False)
@@ -88,26 +100,26 @@ class fstream:
     
     @call_decorator({'file': {'type': 'string'}})
     def _compress(self, vm, f: String):
-        l = [f.line, f.column]
+        pos = [f.line, f.column]
         f: Path = Path(f.value)
         if f.is_file():
             f.write_bytes(compress(f.read_bytes()))
         elif not f.exists():
-            vm.error(SFileError(f.as_posix(), l))
+            vm.error(SFileError(f.as_posix(), pos))
         elif not f.is_dir():
-            vm.error(STypeError('Expected a file but got a directory', l))
+            vm.error(STypeError('Expected a file but got a directory', pos))
         
-        return Nil(*l)
+        return Nil(*pos)
     
     @call_decorator({'file': {'type': 'string'}})
     def _decompress(self, vm, f: String):
-        l = [f.line, f.column]
+        pos = [f.line, f.column]
         f: Path = Path(f.value)
         if f.is_file():
             f.write_bytes(decompress(f.read_bytes()))
         elif not f.exists():
-            vm.error(SFileError(f.as_posix(), l))
+            vm.error(SFileError(f.as_posix(), pos))
         elif not f.is_dir():
-            vm.error(STypeError('Expected a file but got a directory', l))
+            vm.error(STypeError('Expected a file but got a directory', pos))
         
-        return Nil(*l)
+        return Nil(*pos)

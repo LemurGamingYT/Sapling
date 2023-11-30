@@ -101,7 +101,7 @@ class Math:
     def _log10(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, log10(x.value))
     
-    @call_decorator({'x': {'type': 'int', 'y': {'type': 'int'}}}, req_vm=False)
+    @call_decorator({'x': {'type': 'int'}, 'y': {'type': 'int'}}, req_vm=False)
     def _random_int(self, x: Int, y: Int) -> Int:
         return Int(x.line, x.column, randint(x.value, y.value))
         

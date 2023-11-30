@@ -1,5 +1,0 @@
-// Define an array
-arr = range(0, 101, 10)
-
-// For each element in the array, times it by 2
-print({x * 2 : x <- arr})

@@ -77,5 +77,6 @@
  "nonPyinstallerOptions": {
   "increaseRecursionLimit": true,
   "manualArguments": ""
- }
+ },
+ "Cython-Comment": "Rewriting sapling.vmutils.verify_params() as Cython a 1.52x speed gain, when ran once, was noted. Ran 100 times, it measured a 4x performance gain."
 }

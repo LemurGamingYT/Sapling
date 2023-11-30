@@ -16,5 +16,5 @@ print(time.time_function(test_time))
 // Pause the execution of the program for 2 seconds
 time.pause(2)
 
-// Print the current time
+// Print the system's current time
 print(time.current_time())

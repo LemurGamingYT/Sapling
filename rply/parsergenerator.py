@@ -195,6 +195,7 @@ class ParserGenerator(object):
             if self.cache_id is not None:
                 self._write_cache(cache_dir, cache_file, table)
 
+        # TODO: Fix conflicts
         # if table.sr_conflicts:
         #     warnings.warn(
         #         "%d shift/reduce conflict%s" % (

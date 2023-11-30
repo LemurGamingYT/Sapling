@@ -2,6 +2,7 @@ from platform import architecture, machine, node, platform, processor, release, 
 from os import getcwd, getenv, cpu_count, system as shell
 
 from pyautogui import leftClick, rightClick, middleClick, keyDown, keyUp, moveTo
+from keyboard import block_key, unblock_key
 from pyperclip import copy, paste
 
 from sapling.std.call_decorator import call_decorator
@@ -10,6 +11,16 @@ from sapling.objects import String, Array, Nil, Int
 
 class System:
     type = 'System'
+
+    @call_decorator({'key': {'type': 'string'}}, req_vm=False)
+    def _block_key(self, key: String) -> Nil:
+        block_key(key.value)
+        return Nil(key.line, key.column)
+
+    @call_decorator({'key': {'type': 'string'}}, req_vm=False)
+    def _unblock_key(self, key: String) -> Nil:
+        unblock_key(key.value)
+        return Nil(key.line, key.column)
     
     @call_decorator({'command': {'type': 'string'}}, req_vm=False)
     def _shell(self, command: String):

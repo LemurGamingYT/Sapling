@@ -1,23 +1,17 @@
 from sapling.vmutils import Param, verify_params
-from functools import wraps, cache
+from functools import wraps
 from typing import Callable
 
 
-def make_params(params: dict) -> list:
-    return [
-        Param(key, data.get('type', 'any'), data.get('default'))
-        for key, data in params.items()
-    ]
-
-
 def call_decorator(params: dict = None, is_attr: bool = True, req_vm: bool = True) -> Callable:
-    params = [] if params is None else make_params(params)
+    params = [Param(k, v.get('type'), v.get('default')) for k, v in params.items()]\
+        if params is not None else []
 
     def decorator(func: Callable) -> Callable:
         setattr(func, 'params', params)
 
         @wraps(func)
-        def wrapper(vm, args, *other):
+        def wrapper(vm, args: list, *other):
             from sapling.vm import VM
 
             obj = None
@@ -25,15 +19,16 @@ def call_decorator(params: dict = None, is_attr: bool = True, req_vm: bool = Tru
                 if not isinstance(vm, VM):
                     obj = vm
 
-                if len(other) > 0 and len(other[0]) > 0:
-                    vm = other[0][0]
+                if other:
+                    if other[0]:
+                        vm = other[0][0]
+                        if isinstance(other[0][0], VM):
+                            args = other[0][1:]
                 elif isinstance(args, VM):
-                    vm = args
-                    args = other[0]
-
-                if len(other) > 0 and len(other[0]) > 0:
-                    if isinstance(other[0][0], VM):
-                        args = other[0][1:]
+                    vm, args = args, other[0]
+                
+                if isinstance(args, VM):
+                    vm, args = args, other[0]
 
             args = verify_params(vm, args, params)
             if req_vm:

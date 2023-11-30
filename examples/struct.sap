@@ -1,8 +1,0 @@
-// Define a struct
-struct Vector2 {
-    int x
-    int y
-}
-
-// Instantiate the Vector2 struct
-print(new Vector2(0, 0))
