@@ -1,4 +1,4 @@
-from sapling.objects import String, Int, StrBytes, Bool
+from sapling.objects import String, Int, StrBytes, Bool, Array
 from sapling.std.call_decorator import call_decorator
 from sapling.error import STypeError
 
@@ -31,11 +31,7 @@ class Unicode:
     
     @call_decorator({'code_point': {'type': 'int'}})
     def _get_char(self, vm, code_point: Int) -> String:
-        return String(vm.loose_pos.line, vm.loose_pos.column, chr(code_point))
-    
-    @call_decorator({'s': {'type': 'string'}})
-    def _get_code_points(self, vm, str: String) -> String:
-        return String(vm.loose_pos.line, vm.loose_pos.column, ''.join(map(chr, str)))
+        return String(vm.loose_pos.line, vm.loose_pos.column, chr(code_point.value))
     
     @call_decorator({'s': {'type': 'string'}})
     def _is_alpha(self, vm, s: String) -> Bool:
@@ -77,6 +73,6 @@ class Unicode:
     def _is_ascii(self, vm, s: String) -> Bool:
         return Bool(vm.loose_pos.line, vm.loose_pos.column, s.value.isascii())
     
-    @call_decorator({'s': {'type': 'string'}})
-    def _order_alphabet(self, vm, s: String) -> String:
+    @call_decorator({'s': {'type': ('string', 'array')}})
+    def _order_alphabet(self, vm, s: String | Array) -> String:
         return String(*vm.loose_pos, ''.join(sorted(s.value)))

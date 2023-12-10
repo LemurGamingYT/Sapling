@@ -2,15 +2,14 @@ from dataclasses import dataclass
 
 from sapling.std.call_decorator import call_decorator
 from sapling.error import STypeError, SOverflowError
-from sapling.objects import Int, String, Node
+from sapling.objects import Int, String
 
 
 @dataclass(unsafe_hash=True, slots=True)
-class Bit(Node):
-    __name__ = 'Bit'
+class Bit(Int):
     type = 'Bit'
-    
-    value: str
+
+    value: str | int
     
     def repr(self, _) -> str:
         return bin(self.value)
@@ -21,6 +20,10 @@ class Bit(Node):
             self.value = int(self.value, 2)
         except TypeError:
             self.value = int(self.value)
+
+    def __sub__(self, other):
+        if other.type == 'int':
+            return Bit(self.line, self.column, self.value - other.value)
     
     def __and__(self, other):
         if other.type == 'Bit':
@@ -41,6 +44,22 @@ class Bit(Node):
     def __rshift__(self, other):
         if other.type == 'int':
             return Bit(self.line, self.column, self.value >> other.value)
+
+    def __ge__(self, other):
+        if other.type == 'Bit':
+            return Bit(self.line, self.column, self.value >= other.value)
+
+    def __le__(self, other):
+        if other.type == 'Bit':
+            return Bit(self.line, self.column, self.value <= other.value)
+
+    def __gt__(self, other):
+        if other.type == 'Bit':
+            return Bit(self.line, self.column, self.value > other.value)
+
+    def __lt__(self, other):
+        if other.type == 'Bit':
+            return Bit(self.line, self.column, self.value < other.value)
     
     def __invert__(self):
         return Bit(self.line, self.column, ~self.value)
@@ -92,21 +111,23 @@ class Bits:
     
     @call_decorator({'x': {'type': 'Bit'}, 'position': {'type': 'Bit'}}, req_vm=False)
     def _bit_set(self, x: Bit, position: Bit) -> Bit:
-        if position >= 8:
-            return x.value | (1 << (position - 8))
+        if position >= Int(x.line, x.column, 8):
+            return x.value | (Int(x.line, x.column, 1) << (position - Int(x.line, x.column, 8)))
         
-        return x | (1 << position)
+        return x | (Int(x.line, x.column, 1) << position)
     
     @call_decorator({'x': {'type': 'Bit'}, 'position': {'type': 'Bit'}}, req_vm=False)
     def _bit_clear(self, x: Bit, position: Bit) -> Bit:
-        if position >= 8:
-            return Bit(x.line, x.column, x.value & ~(1 << (position - 8)))
+        if position >= Int(x.line, x.column, 8):
+            return Bit(x.line, x.column, x.value & ~(Int(x.line, x.column, 1) << (
+                    position - Int(x.line, x.column, 8)
+            )))
         
-        return x & ~(1 << position)
+        return x & ~(Int(x.line, x.column, 1) << position)
     
     @call_decorator({'x': {'type': 'Bit'}, 'position': {'type': 'Bit'}}, req_vm=False)
     def _bit_toggle(self, x: Bit, position: Bit) -> Bit:
-        if position >= 8:
-            return x ^ (1 << (position - 8))
+        if position >= Int(x.line, x.column, 8):
+            return x ^ (Int(x.line, x.column, 1) << (position - Int(x.line, x.column, 8)))
         
-        return x ^ (1 << position)
+        return x ^ (Int(x.line, x.column, 1) << position)

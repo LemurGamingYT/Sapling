@@ -1,8 +1,16 @@
 //import "ai"
 
-//model = ai.train(
-//    {'Dear Sir, I am a prince in Nigeria', 'Hello, your order has been shipped'},
-//    {'scam', 'not scam'}
-//)
+//print(Parsers.Csv.parse("examples/libs/ai.csv"))
 
-//print(model.predict({'Hello, your package has been shipped'}))
+//model = ai.train({
+//    "Your package has been delivered",
+//    "Sir, you have been chosen for our spin the wheel!",
+//    "Sir, you have missed a bill",
+//    "Hello, you seem like a good candidate of our new spin the wheel competition!",
+//    "Hello sir, you have just been charged $500. Please report to us if this is incorrect",
+//    "How to make $10000000 in ONE day!",
+//    "Send me 10 bitcoin, NOW!",
+//    "I have locked your files, send me so much bitcoin I'll be rich!",
+//    "WINNER! You have logged into our website as our 100 thousandth customer, click here to claim your prize",
+//}, {"spam", "spam", "ham", "spam", "ham", "spam", "spam", "spam"})
+//print(model.test())

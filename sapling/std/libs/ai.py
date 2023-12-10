@@ -1,44 +1,45 @@
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import LabelEncoder
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score
-from sklearn.pipeline import Pipeline
 
 from sapling.std.call_decorator import call_decorator
-from sapling.objects import Array, Float, Class
+from sapling.objects import Array, Class, Float
+from sapling.error import STypeError
 
 
-class model:
-    __name__ = 'model'
-    type = 'model'
+class Model:
+    type = 'Model'
     
-    def __init__(self, dataset: list, labels: list) -> None:
-        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(dataset, labels, test_size=0.2)
+    def repr(self, _) -> str:
+        return f'Model({self.model})'
+    
+    def __init__(self, model: MultinomialNB, X_test, y_test):
+        self.model = model
         
-        self.model = Pipeline([
-            ('tfidf', TfidfVectorizer()),
-            ('clf', LogisticRegression())
-        ])
-        
-        self.model.fit(self.x_train, self.y_train)
-
-    @staticmethod
-    def repr(_) -> str:
-        return 'model()'
+        self.X_test = X_test
+        self.y_test = y_test
     
     
-    @call_decorator({'input': {'type': 'array'}}, req_vm=False)
-    def _predict(self, inp: Array) -> Float:
-        y_pred = self.model.predict(self.x_train)
-        accuracy = accuracy_score(self.y_test, y_pred)
-        return Float(inp.line, inp.column, accuracy)
+    @call_decorator()
+    def _test(self, vm) -> Float:
+        y_pred = self.model.predict(self.X_test)
+        return Float(*vm.loose_pos, accuracy_score(self.y_test, y_pred))
 
 
 class ai:
     type = 'ai'
-
-    @call_decorator({'dataset': {'type': 'array'}, 'labels': {'type': 'array'}}, req_vm=False)
-    def _train(self, dataset: Array, labels: Array):
-        return Class.from_py_cls(model(
-            dataset.to_py_list(), labels.to_py_list()
-        ), dataset.line, dataset.column)
+    
+    @call_decorator({'data': {'type': 'array'}, 'labels': {'type': 'array'}}, is_attr=False)
+    def _train(vm, data: Array, labels: Array) -> Class:
+        if len(data) != len(labels):
+            vm.error(STypeError('data and labels must have the same length', vm.loose_pos))
+        
+        vectorizer = CountVectorizer()
+        X = vectorizer.fit_transform(data.to_py_list())
+        y = LabelEncoder().fit_transform(labels.to_py_list())
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        model = MultinomialNB()
+        model.fit(X_train, y_train)
+        return Class.from_py_cls(Model(model, X_test, y_test), data.line, data.column)

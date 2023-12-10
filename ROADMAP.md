@@ -48,7 +48,7 @@ class Dog <- Animal {
 dog = new Dog()
 dog.speak()
 ```
-- **Reference Parameters**: (a possible feature because I'm not sure how this would be implemented) pass parameters by reference, anything changed in the function will be changed outside of the function, identical to mutable parameters.
+- **Reference Parameters**: (a possible feature because I'm not sure how this would be implemented) pass parameters by reference, anything changed in the function will be changed outside the function, identical to mutable parameters.
 ```
 func test(int &x) {
     x = 10
@@ -70,7 +70,7 @@ func x.on_change(int new_value) {
 print(x)
 x = 25
 ```
-- **Async/Await**: Asynchronus operations.
+- **Async/Await**: Asynchronous operations.
 ```
 async func slow_task() {
     print("I'm slowwwwwwwww.......")

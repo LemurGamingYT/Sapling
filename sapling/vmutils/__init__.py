@@ -8,8 +8,8 @@ Contains utility functions used while the VM is running
 
 from dataclasses import dataclass, field
 from collections import namedtuple
+from inspect import stack
 
-# from .cverify_params import verify_params
 from sapling.error import STypeError
 from sapling.parser import parse
 from sapling.codes import Code
@@ -20,7 +20,7 @@ def get_bytecode(src: str) -> Code:
     return parse(lex(src))
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class Param:
     """Represents a Parameter of a function"""
 
@@ -29,7 +29,7 @@ class Param:
     default: any = field(default=None)
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class Arg:
     """Represents an Argument of a function"""
 
@@ -40,12 +40,24 @@ class Arg:
 def invalid_cast_type(vm, t: str):
     vm.error(STypeError(f'Invalid cast type \'{t}\'', vm.loose_pos))
 
+def operator_error(vm, left, op: str, right, pos: list):
+    vm.error(
+        STypeError(f'Operator \'{op}\' cannot be applied to \'{left.type}\' and \'{right.type}\'',
+                   pos)
+    )
 
-def verify_params(vm, args: list[Arg], params: list[Param]):
+
+def debug_previous_function(back_by: int = 2) -> None:
+    functions = stack()[back_by][0]
+    print('Debug Previous Functions:', functions)
+
+
+def verify_params(vm, args: tuple[Arg], params: tuple[Param]) -> tuple:
     z = zip(args, params)
-    new_args = []
     
-    for arg, param in z:
+    def check(a: tuple):
+        arg, param = a
+        
         param_type = param.type
         arg_value = arg.value
         arg_value_type = arg_value.type
@@ -54,13 +66,15 @@ def verify_params(vm, args: list[Arg], params: list[Param]):
                 f'Expected \'{param_type}\' but got \'{arg_value_type}\'',
                 [arg_value.line, arg_value.column]
             ))
-        elif isinstance(param_type, set) and 'any' not in param_type and arg_value_type not in param_type:
+        elif isinstance(param_type, tuple) and 'any' not in param_type and arg_value_type not in param_type:
             vm.error(STypeError(
                 f'Expected \'{param_type}\' but got \'{arg_value_type}\'',
                 [arg_value.line, arg_value.column]
             ))
 
-        new_args.append(arg_value)
+        return arg_value
+    
+    new_args = list(map(check, z))
 
     if len(new_args) < len(params):
         for param in params:
@@ -79,7 +93,7 @@ def verify_params(vm, args: list[Arg], params: list[Param]):
             args[0].value.column
         ]))
 
-    return new_args
+    return tuple(new_args)
 
 
 def py_to_sap(value, line: int, column: int, **kwargs):

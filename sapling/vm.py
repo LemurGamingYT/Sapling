@@ -6,21 +6,20 @@ The main VM class for executing Sapling bytecode
 """
 
 from operator import add, sub, mul, truediv, mod, eq, ne, gt, lt, ge, le, and_, or_
-from typing import NoReturn, Callable
-from re import compile as re_compile
 from sys import exit as sys_exit
 from contextlib import suppress
 from collections import deque
+from typing import NoReturn
 from types import NoneType
 from pickle import loads
 from pathlib import Path
 
 import sapling.codes as codes
 from sapling.error import (
-    STypeError, SRuntimeError, SImportError, SNameError, SError, SIndexError, SAttributeError
+    STypeError, SRuntimeError, SImportError, SNameError, SError, SIndexError
 )
 from sapling.std import public_funcs, public_classes, public_libs
-from sapling.vmutils import Caller, Arg, get_bytecode, Param
+from sapling.vmutils import Caller, get_bytecode, operator_error
 from sapling.objects import *
 
 
@@ -46,7 +45,7 @@ class VM:
     call_stack: deque[Caller] = deque([])
     loose_pos: list[int, int] = []
 
-    def __init__(self, src: str, parent_env: dict = None):
+    def __init__(self, src: str | None, parent_env: dict = None):
         self.env = public_funcs | public_classes
         if parent_env is not None:
             self.env |= parent_env
@@ -168,13 +167,13 @@ class VM:
     def execute_body(self, instruction: codes.Body):
         for stmt in instruction.stmts:
             out = self.execute(stmt)
-            if isinstance(stmt, (codes.Break, codes.Return, codes.Continue)):
+            if isinstance(stmt, codes.Return):
                 return out
 
-    execute_args = lambda self, instruction: [self.execute_arg(arg) for arg in instruction.args]
+    execute_args = lambda self, instruction: tuple(self.execute_arg(arg) for arg in instruction.args)
     execute_arg = lambda self, instruction: Arg(self.execute(instruction.value))
     
-    execute_params = lambda self, instruction: [self.execute_param(param) for param in instruction.params]
+    execute_params = lambda self, instruction: tuple(self.execute_param(param) for param in instruction.params)
     execute_param = lambda self, instruction: Param(
         instruction.name,
         instruction.annotation,
@@ -214,19 +213,21 @@ class VM:
     
     def execute_arrcomp(self, instruction: codes.ArrayComp):
         arr = self.execute(instruction.arr)
+        expr = instruction.expr
+        
         if arr.type != 'array':
             return self.error(STypeError('Expected \'array\' for array comprehension',
                 [arr.line, arr.column]
             ))
 
         f = Func(instruction.line, instruction.column, '_arrcomp',
-            [Param(instruction.ident)], codes.Body(instruction.expr.line, instruction.expr.column, [
-                codes.Return(instruction.expr.line, instruction.expr.column, instruction.expr)
+            (Param(instruction.ident),), codes.Body(expr.line, expr.column, [
+                codes.Return(expr.line, expr.column, expr)
             ])
         )
 
         return Array.from_py_iter(map(
-            lambda val: f(self, [Arg(val)]), arr.value
+            lambda val: f(self, (Arg(val),)), arr.value
         ), arr.line, arr.column)
 
     def execute_call(self, instruction: codes.Call):
@@ -235,7 +236,7 @@ class VM:
             return self.error(STypeError(f'\'{func.type}\' is not callable',
                                          [func.line, func.column]))
         
-        args = self.execute_args(instruction.args) if instruction.args else []
+        args = self.execute_args(instruction.args) if instruction.args else ()
         self.call_stack.appendleft(Caller(func))
 
         return func(self, args)
@@ -256,28 +257,29 @@ class VM:
 
     def execute_assign(self, instruction: codes.Assign):
         value = self.execute(instruction.value)
+        name = instruction.name
 
         if instruction.operation != '':
-            if self.env.get(instruction.name.value) is None:
-                self.error(SNameError(instruction.name.value, [instruction.line, instruction.column]))
+            if self.env.get(name) is None:
+                self.error(SNameError(name, [instruction.line, instruction.column]))
 
-            current_value = self.env[instruction.name.value]
+            current_value = self.env[name]
             if current_value.constant:
-                self.error(SRuntimeError(f'Cannot assign to constant \'{instruction.name.value}\'',
+                self.error(SRuntimeError(f'Cannot assign to constant \'{name}\'',
                     [instruction.line, instruction.column]
                 ))
 
             current_value = current_value.value
             value = self.operators[instruction.operation](current_value, value)
 
-        if self.env.get(instruction.name.value) is not None:
-            v = self.env.get(instruction.name.value)
+        if self.env.get(name) is not None:
+            v = self.env.get(name)
             if isinstance(v, Var) and v.constant:
-                self.error(SRuntimeError(f'Cannot assign to constant \'{instruction.name.value}\'',
+                self.error(SRuntimeError(f'Cannot assign to constant \'{name}\'',
                     [instruction.line, instruction.column]
                 ))
             else:
-                self.env[instruction.name.value].value = value
+                self.env[name].value = value
 
         if instruction.type not in {value.type, 'any'}:
             self.error(STypeError(
@@ -285,14 +287,14 @@ class VM:
                 [instruction.line, instruction.column]
             ))
         
-        self.env[instruction.name.value] = Var(
-            instruction.line, instruction.column, instruction.name.value, value,
+        self.env[name] = Var(
+            instruction.line, instruction.column, name, value,
             instruction.constant
         )
 
     def execute_func(self, instruction: codes.FuncDef):
+        params = self.execute_params(instruction.params) if instruction.params else ()
         name = instruction.name.value
-        params = self.execute_params(instruction.params) if instruction.params else []
 
         self.env[name] = Func(instruction.line, instruction.column, name, params, instruction.body)
     
@@ -312,13 +314,13 @@ class VM:
             ln,
             col,
             '_init',
-            [Param(prop.name, prop.type) for prop in instruction.fields],
-            codes.Body(ln, col, [
+            tuple(Param(prop.name, prop.type) for prop in instruction.fields),
+            codes.Body(ln, col, tuple(
                 codes.SetSelf(prop.line, prop.column, prop.name, codes.Id(
                     prop.line, prop.column, prop.name
                 ), instruction.name)
                 for prop in instruction.fields
-            ])
+            ))
         )
         
         struct = Class(
@@ -338,10 +340,10 @@ class VM:
             self.error(SNameError(instruction.name, [instruction.line, instruction.column]))
         
         if not isinstance(c, Class):
-            self.error(STypeError(f'Cannot instantiate \'{c.type}\'', [c.line, c.column]))
+            self.error(STypeError(f'Cannot instantiate type \'{c.type}\'', [c.line, c.column]))
         
         if '_init' in c.objects:
-            c.objects['_init'](self, self.execute_args(instruction.args) if instruction.args else [])
+            c.objects['_init'](self, self.execute_args(instruction.args) if instruction.args else ())
         
         return c
 
@@ -370,12 +372,12 @@ class VM:
         try:
             out = self.operators[instruction.op](left, right)
         except TypeError:
-            return self.operator_error(left, instruction.op, right, [left.line, left.column])
+            return operator_error(self, left, instruction.op, right, [left.line, left.column])
         except ZeroDivisionError:
             return self.error(STypeError('Cannot divide by zero', self.loose_pos))
 
         if out is None:
-            self.operator_error(left, instruction.op, right, [left.line, left.column])
+            operator_error(self, left, instruction.op, right, [left.line, left.column])
 
         return out
 
@@ -430,7 +432,7 @@ class VM:
             instruction.line,
             instruction.column,
             name,
-            self.execute_params(instruction.params) if instruction.params else [],
+            self.execute_params(instruction.params) if instruction.params else (),
             instruction.body,
             parent_cls=c
         )
@@ -487,9 +489,3 @@ class VM:
         codes.AttrFuncDef: execute_attr_func,
         codes.Repeat: execute_repeat
     }
-
-
-    operator_error = lambda self, left, op, right, pos: self.error(
-        STypeError(f'Operator \'{op}\' cannot be applied to \'{left.type}\' and \'{right.type}\'',
-                   pos)
-    )

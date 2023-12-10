@@ -37,7 +37,7 @@ class Player:
         self.pb.resume()
         return Nil(*vm.loose_pos)
 
-    @call_decorator({'vol': {'type': {'int', 'float'}}})
+    @call_decorator({'vol': {'type': ('int', 'float')}})
     def _volume(self, vm, v: Float):
         if 1 < v.value < 0:
             vm.error(STypeError('Volume must be between 0 and 1', v.pos))

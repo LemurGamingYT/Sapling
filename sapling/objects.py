@@ -9,6 +9,7 @@ Contains all the object classes used by the VM
 from typing import Callable, Self, Iterable, AnyStr, Union
 from re import Pattern, compile as re_compile
 from dataclasses import dataclass, field
+from functools import reduce
 
 from sapling.vmutils import Param, py_to_sap, sap_to_py, verify_params, Arg
 from sapling.std.call_decorator import call_decorator
@@ -147,6 +148,12 @@ class Int(Node):
                 return Bool(self.line, self.column, self.value >= other.value)
             case 'float':
                 return Bool(self.line, self.column, self.value >= other.value)
+
+    def __lshift__(self, other):
+        match other.type:
+            case 'Bit':
+                from sapling.std.classes.bits import Bit
+                return Bit(self.line, self.column, other.value << self.value)
 
     def __bool__(self) -> bool:
         return self.value > 0
@@ -611,7 +618,7 @@ class Regex(Node):
 class Array(Node):
     """Used to represent an array of nodes in Sapling"""
 
-    value: list[Node]
+    value: list | Iterable
 
     type = 'array'
 
@@ -632,9 +639,9 @@ class Array(Node):
             Self: The generated array
         """
 
-        return Array(line, column, list(map(lambda v:
-            py_to_sap(v, line, column), py_iterable))
-        )
+        return Array(line, column, map(lambda v:
+            py_to_sap(v, line, column), py_iterable
+        ))
 
     def to_py_list(self) -> list:
         """Converts this Sapling Array into a python list
@@ -648,7 +655,7 @@ class Array(Node):
 
     @call_decorator({'index': {'type': 'int'}}, req_vm=False)
     def _get(self, index: Int) -> Node:
-        if len(self.value) > index.value:
+        if len(self.value) >= index.value:
             return self.value[index.value]
 
         return Nil(self.line, self.column)
@@ -677,12 +684,33 @@ class Array(Node):
     @call_decorator({'func': {'type': 'func'}})
     def _map(self, vm, func: 'Func') -> Self:
         return Array(self.line, self.column, map(
-            lambda v: func(vm, [Arg(v)]), self.value
+            lambda v: func(vm, (Arg(v),)), self.value
+        ))
+    
+    @call_decorator({'func': {'type': 'func'}})
+    def _filter(self, vm, func: 'Func') -> Self:
+        return Array(self.line, self.column, filter(
+            lambda v: func(vm, (Arg(v),)), self.value
+        ))
+    
+    @call_decorator({'func': {'type': 'func'}})
+    def _reduce(self, vm, func: 'Func') -> Node:
+        return reduce(
+            lambda v, w: func(vm, (Arg(v), Arg(w))), self.value
+        )
+    
+    @call_decorator({'func': {'type': 'func'}})
+    def _sort(self, vm, func: 'Func') -> Self:
+        return Array(self.line, self.column, sorted(
+            self.value, key=lambda v: func(vm, (Arg(v),))
         ))
 
     
     def __hash__(self):
         return hash(tuple(self.value))
+    
+    def __post_init__(self):
+        self.value = list(self.value)
 
     def __add__(self, other):
         match other.type:
@@ -808,7 +836,7 @@ class Func(Node):
     """Used to represent a function in Sapling"""
 
     name: str
-    params: list[Param]
+    params: tuple[Param]
     body: Body | None = field(default=None)
     func: Union[Callable, None] = field(default=None)
 
@@ -829,10 +857,10 @@ class Func(Node):
     
     @call_decorator({'args': {'type': 'array', 'default': (Array, [])}})
     def _call(self, vm, args: Array) -> Node:
-        return self(vm, [Arg(arg) for arg in args])
+        return self(vm, tuple(Arg(arg) for arg in args))
 
 
-    def __call__(self, vm, args):
+    def __call__(self, vm, args: tuple):
         if self.func is not None:
             return self.func(vm, args)
         elif self.body is not None:
@@ -870,10 +898,7 @@ class Method(Func):
         return f'Method \'{self.name}\''
 
 
-    def __call__(self, vm, args: list):
-        args.insert(0, vm)
-        vm = self.parent_cls
-
+    def __call__(self, vm, args: tuple):
         return super(Method, self).__call__(vm, args)
 
 

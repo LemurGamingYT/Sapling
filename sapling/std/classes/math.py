@@ -22,7 +22,7 @@ class Math:
     _PI = Float(-1, -1, pi)
     _E = Float(-1, -1, e)
     
-    @call_decorator({'num': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'num': {'type': ('int', 'float')}}, req_vm=False)
     def _snum(self, num: Int | Float) -> String:
         x = num.value
         magnitude = 0
@@ -49,7 +49,7 @@ class Math:
     def _factorial(self, x: Int) -> Int:
         return Int(x.line, x.column, factorial(x.value))
     
-    @call_decorator({'arg1': {'type': {'int', 'float'}}, 'arg2': {'type': {'int', 'float'}}},
+    @call_decorator({'arg1': {'type': ('int', 'float')}, 'arg2': {'type': ('int', 'float')}},
                     req_vm=False)
     def _min(self, arg1: Int | Float, arg2: Int | Float) -> Int | Float:
         if arg1.type == 'float' or arg2.type == 'float':
@@ -57,7 +57,7 @@ class Math:
 
         return Int(arg1.line, arg1.column, min(arg1.value, arg2.value))
     
-    @call_decorator({'arg1': {'type': {'int', 'float'}}, 'arg2': {'type': {'int', 'float'}}},
+    @call_decorator({'arg1': {'type': ('int', 'float')}, 'arg2': {'type': ('int', 'float')}},
                     req_vm=False)
     def _max(self, arg1: Int | Float, arg2: Int | Float) -> Int | Float:
         if arg1.type == 'float' or arg2.type == 'float':
@@ -65,39 +65,39 @@ class Math:
 
         return Int(arg1.line, arg1.column, max(arg1.value, arg2.value))
     
-    @call_decorator({'fahrenheit': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'fahrenheit': {'type': ('int', 'float')}}, req_vm=False)
     def _to_celsius(self, fahrenheit: Int | Float) -> Float:
         return Float(fahrenheit.line, fahrenheit.column, (fahrenheit.value - 32) * 5/9)
     
-    @call_decorator({'celsius': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'celsius': {'type': ('int', 'float')}}, req_vm=False)
     def _to_fahrenheit(self, celsius: Int | Float) -> Float:
         return Float(celsius.line, celsius.column, (celsius.value * 9/5) + 32)
     
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'x': {'type': ('int', 'float')}}, req_vm=False)
     def _sqrt(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, sqrt(x.value))
 
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'x': {'type': ('int', 'float')}}, req_vm=False)
     def _sine(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, sin(x.value))
     
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'x': {'type': ('int', 'float')}}, req_vm=False)
     def _cosine(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, cos(x.value))
     
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'x': {'type': ('int', 'float')}}, req_vm=False)
     def _tangent(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, tan(x.value))
     
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'x': {'type': ('int', 'float')}}, req_vm=False)
     def _logarithm(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, log(x.value))
     
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'x': {'type': ('int', 'float')}}, req_vm=False)
     def _log2(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, log2(x.value))
     
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'x': {'type': ('int', 'float')}}, req_vm=False)
     def _log10(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, log10(x.value))
     
@@ -109,11 +109,11 @@ class Math:
     def _random_array(self, x: Array):
         return choice(x.value)
     
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'x': {'type': ('int', 'float')}}, req_vm=False)
     def _to_degrees(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, degrees(x.value))
     
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'x': {'type': ('int', 'float')}}, req_vm=False)
     def _to_radians(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, radians(x.value))
         
@@ -129,17 +129,17 @@ class Math:
     def _round(self, x: Float) -> Int:
         return Int(x.line, x.column, round(x.value))
     
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'x': {'type': ('int', 'float')}}, req_vm=False)
     def _truncate(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, trunc(x.value))
     
-    @call_decorator({'x': {'type': {'int', 'float'}}, 'y': {'type': {'int', 'float'}}})
+    @call_decorator({'x': {'type': ('int', 'float')}, 'y': {'type': ('int', 'float')}})
     def _power(self, vm, x: Int | Float, y: Int | Float) -> Float:
         try:
             return Float(x.line, x.column, x.value ** y.value)
         except OverflowError:
             vm.error(STypeError('Loaded power number is too large', [x.line, x.column - 7]))
     
-    @call_decorator({'x': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'x': {'type': ('int', 'float')}}, req_vm=False)
     def _absolute(self, x: Int | Float) -> Float:
         return Float(x.line, x.column, abs(x.value))

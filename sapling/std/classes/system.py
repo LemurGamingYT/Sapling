@@ -107,13 +107,3 @@ class System:
             return Nil(name.line, name.column)
         
         return String(name.line, name.column, getenv(name.value))
-    
-    # @call_decorator({'name': {'type': 'string'}, 'value': {'type': 'string'}}, req_vm=False)
-    # def _setenv(self, name: String, value: String) -> Nil:
-    #     putenv(name.value, value.value)
-    #     return Nil(name.line, name.column)
-    
-    # @call_decorator({'name': {'type': 'string'}}, req_vm=False)
-    # def _delenv(self, name: String) -> Nil:
-    #     unsetenv(name.value)
-    #     return Nil(name.line, name.column)

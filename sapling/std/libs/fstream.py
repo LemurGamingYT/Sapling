@@ -57,7 +57,7 @@ class File:
         return StrBytes(*self.pos, self.p.read_bytes())
     
     
-    @call_decorator({'contents': {'type': {'string', 'strbytes'}}}, req_vm=False)
+    @call_decorator({'contents': {'type': ('string', 'strbytes')}}, req_vm=False)
     def _write(self, content: String | StrBytes):
         if not self.p.exists():
             return String(*self.pos, '')

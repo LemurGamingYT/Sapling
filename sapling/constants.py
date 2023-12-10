@@ -8,6 +8,9 @@ TOKENS, SKIPS and PRECEDENCE
 """
 
 
+__version__ = '0.1.4'
+
+
 TOKENS = {
     'If': r'if(?!\w)',
     'Else': r'else(?!\w)',
@@ -15,8 +18,6 @@ TOKENS = {
     'Func': r'func(?!\w)',
     'Import': r'import(?!\w)',
     'Return': r'return(?!\w)',
-    'Break': r'break(?!\w)',
-    'Continue': r'continue(?!\w)',
     'Struct': r'struct(?!\w)',
     'Enum': r'enum(?!\w)',
     'Const': r'const(?!\w)',
@@ -72,8 +73,10 @@ SKIPS = {
 
 PRECEDENCE = [
     ('left', ('Func',)),
-    ('left', ('[', ']', ',')),
-    ('left', ('If', 'Else', 'While')),
+    ('left', ('[', ']', ',', '.')),
+    ('left', ('{', '}', ':', 'In', '(', ')')),
+    ('left', ('If', 'Else', 'While', 'Repeat', 'Struct', 'Enum', 'Const', 'Import', 'From', 'Until')),
+    ('left', ('New', 'Break', 'Continue', 'Return')),
     ('left', ('AND', 'OR')),
     ('left', ('NOT',)),
     ('left', ('==', '!=', '>=', '>', '<', '<=')),

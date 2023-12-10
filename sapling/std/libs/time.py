@@ -12,17 +12,17 @@ class time:
     def _current_time(self, vm) -> String:
         return String(*vm.loose_pos, ctime())
     
-    @call_decorator({'seconds': {'type': {'int', 'float'}}}, req_vm=False)
+    @call_decorator({'seconds': {'type': ('int', 'float')}}, req_vm=False)
     def _pause(self, seconds: Int | Float) -> Nil:
         sleep(seconds.value)
         return Nil(seconds.line, seconds.column)
     
     @call_decorator({
         'func': {'type': 'func'},
-        'args': {'type': 'array', 'default': (Array, [])}
+        'args': {'type': 'array', 'default': (Array, ())}
     })
     def _time_function(self, vm, func: Func, args: Array):
-        args = [Arg(arg) for arg in args.value]
+        args = tuple(Arg(arg) for arg in args.value)
         start = perf_counter()
         
         func(vm, args)

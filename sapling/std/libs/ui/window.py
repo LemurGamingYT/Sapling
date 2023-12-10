@@ -1,7 +1,7 @@
 from sapling.std.call_decorator import call_decorator
 from sapling.objects import Int, String, Nil
 
-from customtkinter import CTk, CTkLabel
+from customtkinter import CTk
 
 
 class Window:

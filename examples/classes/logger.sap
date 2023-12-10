@@ -1,0 +1,7 @@
+Logger.init()
+
+Logger.debug("Debug")
+Logger.info("Info")
+Logger.warning("Warning")
+Logger.error("Error")
+Logger.critical("Critical")

@@ -25,30 +25,30 @@ class SError:
         sys_exit(1)
 
 
-class SFileError(SError):
-    """The file error class used when a file is not found"""
-    
-    def __init__(self, path: str, pos: list):
-        self.path = path
-        
-        self.pos = pos
-    
-    def report(self):
-        print(f'FileError: File does not exist \'{self.path}\'')
-        sys_exit(1)
-
-
 class STypeError(SError):
     """The type error class used when the current code is expecting a certain type
     but the current type is not"""
 
     def __init__(self, msg: str, pos: list):
-        self.msg = msg
+        super().__init__(pos)
 
-        self.pos = pos
+        self.msg = msg
 
     def report(self):
         print(f'TypeError: {self.msg}')
+        sys_exit(1)
+
+
+class SFileError(SError):
+    """The file error class used when a file is not found"""
+    
+    def __init__(self, path: str, pos: list):
+        super().__init__(pos)
+
+        self.path = path
+    
+    def report(self):
+        print(f'FileError: File does not exist \'{self.path}\'')
         sys_exit(1)
 
 
@@ -56,9 +56,9 @@ class SIndexError(SError):
     """The index error class used when an index is out of range or a key is not found"""
 
     def __init__(self, msg: str, pos: list):
-        self.msg = msg
+        super().__init__(pos)
 
-        self.pos = pos
+        self.msg = msg
 
     def report(self):
         print(f'IndexError: {self.msg}')
@@ -69,9 +69,9 @@ class SImportError(SError):
     """The import error class used when a library is not found or is invalid"""
 
     def __init__(self, lib_name: str, pos: list) -> None:
-        self.lib_name = lib_name
+        super().__init__(pos)
 
-        self.pos = pos
+        self.lib_name = lib_name
 
     def report(self):
         print(f'ImportError: \'{self.lib_name}\' library not found')
@@ -83,10 +83,10 @@ class SAttributeError(SError):
     doesn't exist"""
 
     def __init__(self, obj_type: str, attr: str, pos: list):
+        super().__init__(pos)
+
         self.obj_type = obj_type
         self.attr = attr
-
-        self.pos = pos
 
     def report(self):
         print(f'AttributeError: \'{self.obj_type}\' type has no attribute \'{self.attr}\'')
@@ -98,9 +98,9 @@ class SNameError(SError):
     in the environment"""
 
     def __init__(self, name: str, pos: list):
-        self.name = name
+        super().__init__(pos)
 
-        self.pos = pos
+        self.name = name
 
     def report(self):
         print(f'NameError: \'{self.name}\' is not defined')
@@ -112,9 +112,9 @@ class SRuntimeError(SError):
     error type cannot be inferred"""
 
     def __init__(self, msg: str, pos: list):
-        self.msg = msg
+        super().__init__(pos)
 
-        self.pos = pos
+        self.msg = msg
 
     def report(self):
         print(f'RuntimeError: {self.msg}')
@@ -125,9 +125,9 @@ class SOverflowError(SError):
     """The overflow error class used when an overflow occurs"""
 
     def __init__(self, msg: str, pos: list):
+        super().__init__(pos)
+
         self.msg = msg
-        
-        self.pos = pos
 
     def report(self):
         print(f'OverflowError: {self.msg}')
@@ -138,9 +138,9 @@ class SDecodeError(SError):
     """The decode error class used when an error occurs during decoding"""
 
     def __init__(self, msg: str, pos: list):
-        self.msg = msg
+        super().__init__(pos)
 
-        self.pos = pos
+        self.msg = msg
 
     def report(self):
         print(f'DecodeError: {self.msg}')

@@ -4,7 +4,6 @@ lexer.py
 
 The lexer for sapling
 uses RPLY
-
 """
 
 
