@@ -15,6 +15,7 @@ from pickle import loads, dumps, HIGHEST_PROTOCOL
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from time import perf_counter
+# from cProfile import Profile
 from random import choice
 from pathlib import Path
 
@@ -72,7 +73,7 @@ def run_directory(d: Path, recursive: bool, config: Configuration) -> None:
 def main(arguments: Namespace) -> None:
     if arguments.run_all_tests:
         from sapling.objects import Int, String, Float, Bool, Array, Nil, StrBytes, Dictionary
-        from sapling.std import public_funcs, public_classes, public_libs
+        from sapling.std import public_funcs
         from sapling.vmutils import Arg
         
         vm = VM(None)
@@ -126,7 +127,10 @@ def main(arguments: Namespace) -> None:
     if not arguments.file.is_file():
         config = Configuration(None, arguments.compile)
     else:
-        config = Configuration(arguments.file.read_text(), arguments.compile)
+        if arguments.file.suffix == '.sapped':
+            config = Configuration(arguments.file.read_bytes(), arguments.compile)
+        else:
+            config = Configuration(arguments.file.read_text(), arguments.compile)
 
     start_time = perf_counter()
 
@@ -158,5 +162,13 @@ if __name__ == '__main__':
                             help='Run anything possible, will take a very long time')
 
     args = arg_parser.parse_args()
+    
+    # profiler = Profile()
+    
+    # profiler.enable()
 
     main(args)
+    
+    # profiler.disable()
+    
+    # profiler.print_stats('cumulative')
