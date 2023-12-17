@@ -36,7 +36,7 @@ New = namedtuple('New', ['line', 'column', 'name', 'args'])
 FuncExpr = namedtuple('FuncExpr', ['line', 'column', 'params', 'body'])
 
 Args = namedtuple('Args', ['line', 'column', 'args'])
-Arg = namedtuple('Arg', ['line', 'column', 'value'])
+Arg = namedtuple('Arg', ['line', 'column', 'value', 'name'])
 
 Params = namedtuple('Params', ['line', 'column', 'params'])
 Param = namedtuple('Param', ['line', 'column', 'name', 'annotation', 'default'])
@@ -56,7 +56,7 @@ SetSelf = namedtuple('SetSelf', ['line', 'column', 'name', 'value', 'class_name'
 StructDefinition = namedtuple('StructDefinition', ['line', 'column', 'name', 'type'])
 EnumDefinition = namedtuple('EnumDefinition', ['line', 'column', 'name', 'value'])
 
-If = namedtuple('If', ['line', 'column', 'condition', 'then', 'otherwise'])
+If = namedtuple('If', ['line', 'column', 'condition', 'then', 'otherwise', 'elseif_chain'])
 Repeat = namedtuple('Repeat', ['line', 'column', 'body', 'condition'])
 While = namedtuple('While', ['line', 'column', 'condition', 'body'])
 Return = namedtuple('Return', ['line', 'column', 'value'])

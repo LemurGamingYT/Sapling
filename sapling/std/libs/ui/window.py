@@ -1,16 +1,15 @@
 from sapling.std.call_decorator import call_decorator
-from sapling.objects import Int, String, Nil
+from sapling.objects import Int, String, Nil, Float
 
 from customtkinter import CTk
 
 
 class Window:
-    __name__ = 'Window'
     type = 'Window'
     
     
     def __init__(self, **kwargs):
-        self.w = CTk()
+        self.w = CTk(kwargs['bg'])
         
         self.w.title(kwargs['title'])
         self.w.geometry(f'{kwargs['width']}x{kwargs['height']}')
@@ -18,11 +17,22 @@ class Window:
     
     @call_decorator({
         'widget': {},
-        'x': {'type': 'int', 'default': (Int, 0)},
-        'y': {'type': 'int', 'default': (Int, 0)}
+        'relx': {'type': {'float', 'int'}, 'default': (Float, .5)},
+        'rely': {'type': {'float', 'int'}, 'default': (Float, .5)},
+        'anchor': {'type': 'string', 'default': (String, 'center')},
+        'relwidth': {'type': {'int', 'float'}, 'default': (Float, .25)},
+        'relheight': {'type': {'int', 'float'}, 'default': (Float, .1)},
     })
-    def _add_widget(self, vm, widget, x: Int, y: Int) -> Nil:
-        widget.python_class.w.place(x=x.value, y=y.value)
+    def _add_widget(self, vm, widget,
+                    relx: Int | Float, rely: Int | Float,
+                    anchor: String,
+                    relwidth: Int | Float, relheight: Int | Float) -> Nil:
+        widget.python_class.w.place(
+            relx=relx.value, rely=rely.value,
+            anchor=anchor.value,
+            relwidth=relwidth.value, relheight=relheight.value
+        )
+        
         return Nil(*vm.loose_pos)
 
     @call_decorator({'new': {'type': 'string'}}, req_vm=False)

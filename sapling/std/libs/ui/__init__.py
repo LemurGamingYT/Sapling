@@ -1,6 +1,7 @@
 from sapling.std.call_decorator import call_decorator
-from sapling.objects import Int, String, Class
+from sapling.objects import Int, String, Class, Func
 from .window import Window
+from .button import Button
 from .label import Label
 from .font import Font
 
@@ -36,22 +37,67 @@ class ui:
     @call_decorator({
         'title': {'type': 'string', 'default': (String, 'Sapling')},
         'width': {'type': 'int', 'default': (Int, 800)},
-        'height': {'type': 'int', 'default': (Int, 600)}
+        'height': {'type': 'int', 'default': (Int, 500)},
+        'bg': {'type': 'string', 'default': (String, '#242424')}
     })
-    def _create_window(self, vm, title: String, width: Int, height: Int) -> Class:
+    def _window(self, vm, title: String, width: Int, height: Int, bg: String) -> Class:
         return Class.from_py_cls(
-            Window(title=title.value, width=width.value, height=height.value),
+            Window(title=title.value, width=width.value, height=height.value, bg=bg.value),
             *vm.loose_pos
         )
     
     @call_decorator({
         'parent': {'type': 'Window'},
-        'width': {'type': 'int', 'default': (Int, 0)},
+        'width': {'type': 'int', 'default': (Int, 140)},
         'height': {'type': 'int', 'default': (Int, 28)},
-        'corner_radius': {'type': 'int', 'default': (Int, 0)},
-        'bg': {'type': 'string', 'default': (String, 'white')},
-        'fg': {'type': 'string', 'default': (String, 'white')},
-        'text_colour': {'type': 'string', 'default': (String, 'black')},
+        'corner_radius': {'type': 'int', 'default': (Int, 5)},
+        'bg': {'type': 'string', 'default': (String, 'transparent')},
+        'fg': {'type': 'string', 'default': (String, '#262626')},
+        'hover_fg': {'type': 'string', 'default': (String, '#262626')},
+        'text_colour': {'type': 'string', 'default': (String, '#ffffff')},
+        'text': {'type': 'string', 'default': (String, '')},
+        'font': {'type': 'Font', 'default': lambda ln, col: Class.from_py_cls(Font(
+            'Arial', 10
+        ), ln, col)},
+        'compound': {'type': 'string', 'default': (String, 'center')},
+        'anchor': {'type': 'string', 'default': (String, 'center')},
+        'on_click': {'type': 'func', 'default': lambda ln, col: Func(ln, col, 'on_click', [])}
+    })
+    def _button(
+        self,
+        vm,
+        parent,
+        width: Int,
+        height: Int,
+        corner_radius: Int,
+        bg: String,
+        fg: String,
+        hover_fg: String,
+        text_colour: String,
+        text: String,
+        f: Font,
+        compound: String,
+        anchor: String,
+        on_click: Func
+        ) -> Class:
+        return Class.from_py_cls(
+            Button(
+                master=parent.python_class.w, width=width.value, height=height.value,
+                corner_radius=corner_radius.value, bg_color=bg.value, fg_color=fg.value,
+                text_color=text_colour.value, text=text.value, font=f.python_class.as_font(),
+                compound=compound.value, anchor=anchor.value, command=lambda: on_click(vm, []),
+                hover_color=hover_fg.value
+            ), *vm.loose_pos
+        )
+    
+    @call_decorator({
+        'parent': {'type': 'Window'},
+        'width': {'type': 'int', 'default': (Int, 140)},
+        'height': {'type': 'int', 'default': (Int, 28)},
+        'corner_radius': {'type': 'int', 'default': (Int, 5)},
+        'bg': {'type': 'string', 'default': (String, 'transparent')},
+        'fg': {'type': 'string', 'default': (String, '#262626')},
+        'text_colour': {'type': 'string', 'default': (String, '#ffffff')},
         'text': {'type': 'string', 'default': (String, '')},
         'font': {'type': 'Font', 'default': lambda ln, col: Class.from_py_cls(Font(
             'Arial', 10
@@ -59,7 +105,7 @@ class ui:
         'compound': {'type': 'string', 'default': (String, 'center')},
         'anchor': {'type': 'string', 'default': (String, 'center')}
     })
-    def _create_label(
+    def _label(
         self,
         vm,
         parent,

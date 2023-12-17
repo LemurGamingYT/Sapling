@@ -16,7 +16,6 @@ from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from time import perf_counter
 # from cProfile import Profile
-from random import choice
 from pathlib import Path
 
 from sapling.constants import __version__
@@ -71,52 +70,6 @@ def run_directory(d: Path, recursive: bool, config: Configuration) -> None:
 
 
 def main(arguments: Namespace) -> None:
-    if arguments.run_all_tests:
-        from sapling.objects import Int, String, Float, Bool, Array, Nil, StrBytes, Dictionary
-        from sapling.std import public_funcs
-        from sapling.vmutils import Arg
-        
-        vm = VM(None)
-        
-        line, column = 0, 0
-        
-        objects = {
-            'int': Int(line, column, 50),
-            'float': Float(line, column, 5.2),
-            'bool': Bool(line, column, True),
-            'string': String(line, column, 'Hello, World!'),
-            'array': Array.from_py_iter(range(1, 100), line, column),
-            'dictionary': Dictionary.from_py_dict({
-                'a': 1,
-                'b': 2,
-                'c': 3
-            }, line, column),
-            'strbytes': StrBytes(line, column, b'Hello, World!'),
-            'nil': Nil(line, column),
-        }
-        
-        objects['any'] = choice(list(objects.values()))
-        
-        def type_to_object(t: str) -> Arg | None:
-            return Arg(objects[t]) if t in objects else None
-        
-        print('\nTesting functions\n')
-        for func in public_funcs.values():
-            print(f'Testing function: {func.name}:')
-            
-            args = [type_to_object(param.type) for param in func.params]
-            if None in args:
-                print('Error: Unaccounted types')
-                continue
-            
-            try:
-                print(f'output={func(vm, args)}')
-            except Exception as e:
-                print(f'Error: {e}')
-                continue
-        
-        sys_exit(0)
-    
     if arguments.benchmark:
         from benchmark.cython_benchmarker import benchmark
 
@@ -158,8 +111,8 @@ if __name__ == '__main__':
                             help='Print the version number and exit')
     arg_parser.add_argument('-r', '--recursive', action='store_true',
                             help='For running directories: recursively loop through the files in a directory')
-    arg_parser.add_argument('-atests', '--run-all-tests', action='store_true',
-                            help='Run anything possible, will take a very long time')
+    # arg_parser.add_argument('-atests', '--run-all-tests', action='store_true',
+    #                         help='Run anything possible, will take a very long time')
 
     args = arg_parser.parse_args()
     

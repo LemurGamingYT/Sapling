@@ -8,7 +8,7 @@ TOKENS, SKIPS and PRECEDENCE
 """
 
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 
 TOKENS = {
@@ -27,7 +27,7 @@ TOKENS = {
     'From': r'from(?!\w)',
     'In': r'in(?!\w)',
 
-    'Float': r'\d+\.\d+',
+    'Float': r'\d*\.\d+',
     'Int': r'\d+',
     'String': r'".*?"|\'.*?\'',
     'Hex': r'0x[0-9a-fA-F]+',
@@ -72,13 +72,9 @@ SKIPS = {
 }
 
 PRECEDENCE = [
-    ('left', ('Func',)),
-    ('left', ('[', ']', ',', '.')),
-    ('left', ('{', '}', ':', 'In', '(', ')')),
-    ('left', ('If', 'Else', 'While', 'Repeat', 'Struct', 'Enum', 'Const', 'Import', 'From', 'Until')),
-    ('left', ('New', 'Break', 'Continue', 'Return')),
+    ('left', ('Id',)),
     ('left', ('AND', 'OR')),
-    ('left', ('NOT',)),
+    ('right', ('NOT',)),
     ('left', ('==', '!=', '>=', '>', '<', '<=')),
     ('left', ('+', '-')),
     ('left', ('*', '/', '%')),

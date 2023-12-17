@@ -18,7 +18,7 @@ import sapling.codes as codes
 from sapling.error import (
     STypeError, SRuntimeError, SImportError, SNameError, SError, SIndexError
 )
-from sapling.std import public_funcs, public_classes, public_libs
+from sapling.std import public_funcs, public_classes, public_libs, variables
 from sapling.vmutils import Caller, get_bytecode, operator_error
 from sapling.objects import *
 
@@ -46,7 +46,7 @@ class VM:
     loose_pos: list[int, int] = []
 
     def __init__(self, src: str | None, parent_env: dict = None):
-        self.env = public_funcs | public_classes
+        self.env = public_funcs | public_classes | variables
         if parent_env is not None:
             self.env |= parent_env
 
@@ -170,10 +170,10 @@ class VM:
             if isinstance(stmt, codes.Return):
                 return out
 
-    execute_args = lambda self, instruction: tuple(self.execute_arg(arg) for arg in instruction.args)
-    execute_arg = lambda self, instruction: Arg(self.execute(instruction.value))
+    execute_args = lambda self, instruction: [self.execute_arg(arg) for arg in instruction.args]
+    execute_arg = lambda self, instruction: Arg(self.execute(instruction.value), instruction.name)
     
-    execute_params = lambda self, instruction: tuple(self.execute_param(param) for param in instruction.params)
+    execute_params = lambda self, instruction: [self.execute_param(param) for param in instruction.params]
     execute_param = lambda self, instruction: Param(
         instruction.name,
         instruction.annotation,
@@ -221,13 +221,13 @@ class VM:
             ))
 
         f = Func(instruction.line, instruction.column, '_arrcomp',
-            (Param(instruction.ident),), codes.Body(expr.line, expr.column, [
+            [Param(instruction.ident)], codes.Body(expr.line, expr.column, [
                 codes.Return(expr.line, expr.column, expr)
             ])
         )
 
         return Array.from_py_iter(map(
-            lambda val: f(self, (Arg(val),)), arr.value
+            lambda val: f(self, [Arg(val)]), arr.value
         ), arr.line, arr.column)
 
     def execute_call(self, instruction: codes.Call):
@@ -236,7 +236,7 @@ class VM:
             return self.error(STypeError(f'\'{func.type}\' is not callable',
                                          [func.line, func.column]))
         
-        args = self.execute_args(instruction.args) if instruction.args else ()
+        args = self.execute_args(instruction.args) if instruction.args else []
         self.call_stack.appendleft(Caller(func))
 
         return func(self, args)
@@ -293,7 +293,7 @@ class VM:
         )
 
     def execute_func(self, instruction: codes.FuncDef):
-        params = self.execute_params(instruction.params) if instruction.params else ()
+        params = self.execute_params(instruction.params) if instruction.params else []
         name = instruction.name.value
 
         self.env[name] = Func(instruction.line, instruction.column, name, params, instruction.body)
@@ -314,7 +314,7 @@ class VM:
             ln,
             col,
             '_init',
-            tuple(Param(prop.name, prop.type) for prop in instruction.fields),
+            [Param(prop.name, prop.type) for prop in instruction.fields],
             codes.Body(ln, col, tuple(
                 codes.SetSelf(prop.line, prop.column, prop.name, codes.Id(
                     prop.line, prop.column, prop.name
@@ -343,13 +343,20 @@ class VM:
             self.error(STypeError(f'Cannot instantiate type \'{c.type}\'', [c.line, c.column]))
         
         if '_init' in c.objects:
-            c.objects['_init'](self, self.execute_args(instruction.args) if instruction.args else ())
+            c.objects['_init'](self, self.execute_args(instruction.args) if instruction.args else [])
         
         return c
 
     def execute_if(self, instruction: codes.If):
         if self.execute(instruction.condition):
             self.execute_body(instruction.then)
+        elif instruction.elseif_chain is not None:
+            for condition, body in instruction.elseif_chain:
+                if self.execute(condition):
+                    self.execute_body(body)
+                    break
+            else:
+                self.execute_body(instruction.otherwise)
         elif instruction.otherwise is not None:
             self.execute_body(instruction.otherwise)
 
@@ -432,7 +439,7 @@ class VM:
             instruction.line,
             instruction.column,
             name,
-            self.execute_params(instruction.params) if instruction.params else (),
+            self.execute_params(instruction.params) if instruction.params else [],
             instruction.body,
             parent_cls=c
         )

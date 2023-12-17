@@ -58,5 +58,5 @@ class sound:
     type = 'sound'
     
     @call_decorator({'file': {'type': 'string'}}, req_vm=False)
-    def _sound(self, file: String) -> Class:
+    def _player(self, file: String) -> Class:
         return Class.from_py_cls(Player(file), file.line, file.column)

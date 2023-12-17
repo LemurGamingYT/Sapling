@@ -23,6 +23,8 @@ for pattern in SKIPS:
     lg.ignore(pattern)
 
 
+lexer = lg.build()
+
 def lex(src: str) -> LexerStream:
     """Builds the RPLY lexer and tokenizes the source code
 
@@ -33,4 +35,4 @@ def lex(src: str) -> LexerStream:
         LexerStream: The tokens
     """
 
-    return lg.build().lex(src)
+    return lexer.lex(src)

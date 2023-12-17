@@ -21,7 +21,6 @@ class SLexError(SError):
 
 
 class Token:
-    __name__ = 'Token'
     type = 'Tokens'
     
     __slots__ = ('t', 'vm')
@@ -44,7 +43,6 @@ class Token:
 
 
 class Tokens:
-    __name__ = 'Tokens'
     type = 'Tokens'
     
     __slots__ = ('stream', 'vm', 'as_list')
@@ -74,7 +72,6 @@ class Tokens:
 
 
 class Lexer:
-    __name__ = 'Lexer'
     type = 'Lexer'
     
     __slots__ = ('lg', 'src')

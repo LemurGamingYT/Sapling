@@ -8,12 +8,10 @@ from sapling.error import SDecodeError
 
 
 class Result:
-    __name__ = 'Result'
     type = 'Result'
 
 
 class WebResponse:
-    __name__ = 'WebResponse'
     type = 'WebResponse'
     
     def repr(self, _) -> str:

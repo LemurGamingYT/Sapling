@@ -554,6 +554,10 @@ class Regex(Node):
     def repr(self, _) -> str:
         return self.value.pattern
 
+    
+    @property
+    def _flag(self) -> String:
+        return String(self.line, self.column, self.value.flags)
 
     @call_decorator({'string': {'type': 'string'}}, req_vm=False)
     def _match(self, string: String) -> Bool:
@@ -565,7 +569,7 @@ class Regex(Node):
 
     @call_decorator({'string': {'type': 'string'}}, req_vm=False)
     def _find_all(self, string: String) -> 'Array':
-        return Array(self.line, self.column, self.value.findall(string.value))
+        return Array.from_py_iter(self.value.findall(string.value), self.line, self.column)
 
 
     def __add__(self, other):
@@ -860,16 +864,13 @@ class Func(Node):
         return self(vm, tuple(Arg(arg) for arg in args))
 
 
-    def __call__(self, vm, args: tuple):
+    def __call__(self, vm, args: list):
         if self.func is not None:
             return self.func(vm, args)
         elif self.body is not None:
             from sapling.vm import VM
             if not isinstance(vm, VM):
-                parent_cls = vm
-                vm = args[0]
-                args = args[1:]
-
+                parent_cls, vm, args = vm, args[0], args[1:]
                 vm.env['self'] = parent_cls
 
             env = vm.env

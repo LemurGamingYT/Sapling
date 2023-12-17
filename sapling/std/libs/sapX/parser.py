@@ -19,7 +19,6 @@ class SParserError(SError):
 
 
 class Parser:
-    __name__ = 'Parser'
     type = 'Parser'
     
     def repr(self, _) -> str:

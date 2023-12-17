@@ -6,7 +6,6 @@ from sapling.vmutils import py_to_sap
 
 
 class Process:
-    __name__ = 'Process'
     type = 'Process'
     
     

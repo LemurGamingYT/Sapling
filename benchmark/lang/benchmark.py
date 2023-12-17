@@ -39,11 +39,6 @@ if __name__ == '__main__':
                             help='Number of times to run the test')
     arg_parser.add_argument('-nout', '--no-output', action='store_true',
                             help='Produce no output from the Sapling file or Python code')
-    arg_parser.add_argument('-ibc', '--include-bytecode-compilation',
-        action='store_true', help="""Include the bytecode compilation time in the results for Sapling.
-This is very slow but it gives a more accurate measurement of what the performance
-of Sapling is. However, Python will be faster if this option is used.
-""")
     
     args = arg_parser.parse_args()
     src = args.file.read_text()
@@ -55,8 +50,10 @@ of Sapling is. However, Python will be faster if this option is used.
     py_time = timeit('py_code()', globals=globals(), number=args.number)
 
     sap_time = timeit(
-        'run_vm(bc, src)',
-        'from main import run_vm;bc = get_bytecode(src)',
+        'run_vm(bc, config)',
+        """from main import run_vm, Configuration
+bc = get_bytecode(src)
+config = Configuration(src, False)""",
         globals=globals(),
         number=args.number
     )

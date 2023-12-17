@@ -5,7 +5,6 @@ from sapling.std.call_decorator import call_decorator
 
 
 class Thread:
-    __name__ = 'Thread'
     type = 'Thread'
     
     def repr(self, _) -> str:

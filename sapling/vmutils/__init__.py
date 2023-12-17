@@ -8,7 +8,7 @@ Contains utility functions used while the VM is running
 
 from dataclasses import dataclass, field
 from collections import namedtuple
-from inspect import stack
+from typing import Iterable, Any
 
 from sapling.error import STypeError
 from sapling.parser import parse
@@ -25,7 +25,7 @@ class Param:
     """Represents a Parameter of a function"""
 
     name: str
-    type: str | set = field(default='any')
+    type: Iterable = field(default='any')
     default: any = field(default=None)
 
 
@@ -47,40 +47,48 @@ def operator_error(vm, left, op: str, right, pos: list):
     )
 
 
-def debug_previous_function(back_by: int = 2) -> None:
-    functions = stack()[back_by][0]
-    print('Debug Previous Functions:', functions)
+def check_param_type(vm, param: Param, value: Any) -> None:
+    param_type = param.type
+    value_type = value.type
+
+    if isinstance(param_type, str) and param_type != 'any' and value_type != param_type:
+        vm.error(STypeError(
+            f'Expected \'{param_type}\' but got \'{value_type}\'',
+            [value.line, value.column]
+        ))
+    elif isinstance(param_type, Iterable) and 'any' not in param_type and value_type not in param_type:
+        vm.error(STypeError(
+            f'Expected \'{param_type}\' but got \'{value_type}\'',
+            [value.line, value.column]
+        ))
 
 
-def verify_params(vm, args: tuple[Arg], params: tuple[Param]) -> tuple:
+def verify_params(vm, args: list[Arg], params: list[Param]) -> list:
     z = zip(args, params)
     
-    def check(a: tuple):
-        arg, param = a
-        
-        param_type = param.type
+    kwargs = {}
+    new_args = []
+    for arg, param in z:
         arg_value = arg.value
-        arg_value_type = arg_value.type
-        if isinstance(param_type, str) and param_type != 'any' and arg_value_type != param_type:
-            vm.error(STypeError(
-                f'Expected \'{param_type}\' but got \'{arg_value_type}\'',
-                [arg_value.line, arg_value.column]
-            ))
-        elif isinstance(param_type, tuple) and 'any' not in param_type and arg_value_type not in param_type:
-            vm.error(STypeError(
-                f'Expected \'{param_type}\' but got \'{arg_value_type}\'',
-                [arg_value.line, arg_value.column]
-            ))
-
-        return arg_value
-    
-    new_args = list(map(check, z))
+        
+        if arg.name is not None and arg.name in {p.name for p in params}:
+            names = [p.name for p in params]
+            check_param_type(vm, params[names.index(arg.name)], arg_value)
+            kwargs[arg.name] = arg_value
+            continue
+        
+        check_param_type(vm, param, arg_value)
+        new_args.append(arg_value)
 
     if len(new_args) < len(params):
         for param in params:
             default = param.default
+            if param.name in kwargs:
+                new_args.append(kwargs[param.name])
+                continue
+            
             if default is not None:
-                if isinstance(default, tuple):
+                if isinstance(default, Iterable):
                     new_args.append(default[0](*vm.loose_pos, default[1]))
                 elif callable(default):
                     new_args.append(default(*vm.loose_pos))
@@ -93,7 +101,7 @@ def verify_params(vm, args: tuple[Arg], params: tuple[Param]) -> tuple:
             args[0].value.column
         ]))
 
-    return tuple(new_args)
+    return new_args
 
 
 def py_to_sap(value, line: int, column: int, **kwargs):

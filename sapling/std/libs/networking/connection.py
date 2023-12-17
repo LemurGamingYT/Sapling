@@ -6,7 +6,6 @@ from sapling.vmutils import py_to_sap
 
 
 class Connection:
-    __name__ = 'connection'
     type = 'connection'
     
     def repr(self, _) -> str:

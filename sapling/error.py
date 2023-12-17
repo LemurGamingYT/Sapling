@@ -4,7 +4,6 @@ error.py
 
 Contains the error classes used by the Sapling VM
 All errors inherit from the SError (Sapling Error) class
-
 """
 
 

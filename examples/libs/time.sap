@@ -18,3 +18,10 @@ time.pause(2)
 
 // Print the system's current time
 print(time.current_time())
+
+// Scheduling a function
+func test() {
+    print("Schedule ran")
+}
+
+time.schedule_func(10, test)

@@ -1,6 +1,8 @@
 class Font:
-    __name__ = 'Font'
     type = 'Font'
+    
+    
+    __slots__ = ('family', 'size')
     
     
     def __init__(self, family: str, size: int):

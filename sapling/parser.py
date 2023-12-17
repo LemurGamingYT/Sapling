@@ -32,14 +32,14 @@ code = pg.production('code : stmts')(lambda p: Code(0, 0, p[0]))
 # @pg.production('type : attr')
 # def type_def(p) -> Type:
 #     """Handles a type definition
-#
+
 #     Args:
 #         p (list): The list of tokens provided by RPLY
-#
+
 #     Returns:
 #         Type: The Type definition bytecode object
 #     """
-#
+
 #     return Type(p[0])
 
 
@@ -52,16 +52,16 @@ def stmts(p) -> list:
 expr = pg.production('stmt : expr')(lambda p: p[0])
 
 assign = pg.production('stmt : Id = expr')(
-    lambda p: Assign(*get_pos(p[0]), p[0].getstr(), p[2], False, '', 'any')
+    lambda p: Assign(*get_pos(p[0]), p[0].value, p[2], False, '', 'any')
 )
 annotated_assign = pg.production('stmt : Id Id = expr')(
-    lambda p: Assign(*get_pos(p[0]), p[1].getstr(), p[3], False, '', p[0].getstr())
+    lambda p: Assign(*get_pos(p[0]), p[1].value, p[3], False, '', p[0].value)
 )
 annotated_const_assign = pg.production('stmt : Const Id Id = expr')(lambda p:
-    Assign(*get_pos(p[0]), p[1].getstr(), p[3], True, '', p[2].getstr())
+    Assign(*get_pos(p[0]), p[1].value, p[3], True, '', p[2].value)
 )
 const_assign = pg.production('stmt : Const Id = expr')(lambda p:
-    Assign(*get_pos(p[0]), p[1].getstr(), p[3], True, '', 'any')
+    Assign(*get_pos(p[0]), p[1].value, p[3], True, '', 'any')
 )
 
 
@@ -71,7 +71,7 @@ const_assign = pg.production('stmt : Const Id = expr')(lambda p:
 @pg.production('stmt : Id / = expr')
 @pg.production('stmt : Id % = expr')
 def assign_with_op(p) -> Assign:
-    return Assign(*get_pos(p[0]), p[0].getstr(), p[3], False, p[1].getstr(), 'any')
+    return Assign(*get_pos(p[0]), p[0].value, p[3], False, p[1].value, 'any')
 
 
 @pg.production('stmt : Func Id ( ) body')
@@ -79,8 +79,8 @@ def assign_with_op(p) -> Assign:
 def func_def(p) -> FuncDef:
     return FuncDef(
         *get_pos(p[0]),
-        Id(*get_pos(p[1]), p[1].getstr()),
-        p[3] if len(p) == 6 else (),
+        Id(*get_pos(p[1]), p[1].value),
+        p[3] if len(p) == 6 else [],
         p[5] if len(p) == 6 else p[4]
     )
 
@@ -89,31 +89,41 @@ def func_def(p) -> FuncDef:
 def attr_func_def(p) -> AttrFuncDef:
     return AttrFuncDef(
         *get_pos(p[0]),
-        p[1].getstr(),
-        p[3].getstr(),
+        p[1].value,
+        p[3].value,
         p[5] if len(p) == 8 else (),
         p[7] if len(p) == 8 else p[6]
     )
 
 
-# TODO: if-elif-else stmt
 if_stmt = pg.production('stmt : If expr body')(lambda p:
-    If(*get_pos(p[0]), p[1], p[2], None)
+    If(*get_pos(p[0]), p[1], p[2], None, None)
 )
 if_else_stmt = pg.production('stmt : If expr body Else body')(lambda p:
-    If(*get_pos(p[0]), p[1], p[2], p[4])
+    If(*get_pos(p[0]), p[1], p[2], p[4], None)
 )
 while_stmt = pg.production('stmt : While expr body')(lambda p:
     While(*get_pos(p[0]), p[1], p[2])
 )
+
+@pg.production('stmt : If expr body elseif_chain')
+@pg.production('stmt : If expr body elseif_chain Else body')
+def if_elseif_stmt(p) -> If:
+    return If(
+        *get_pos(p[0]),
+        p[1],
+        p[2],
+        p[5] if len(p) == 6 else None,
+        p[3] if len(p) == 6 else p[3]
+    )
 
 @pg.production('stmt : Import String')
 @pg.production('stmt : Import import_list From String')
 def import_stmt(p) -> Import:
     return Import(
         *get_pos(p[0]),
-        p[1].getstr() if len(p) == 2 else p[1],
-        p[3].getstr() if len(p) == 4 else None
+        p[1].value if len(p) == 2 else p[1],
+        p[3].value if len(p) == 4 else None
     )
 
 repeat_stmt = pg.production('stmt : Repeat body Until expr')(lambda p:
@@ -121,16 +131,16 @@ repeat_stmt = pg.production('stmt : Repeat body Until expr')(lambda p:
 )
 return_stmt = pg.production('stmt : Return expr')(lambda p: Return(*get_pos(p[0]), p[1]))
 enum = pg.production('stmt : Enum Id { enum_defs }')(lambda p:
-    Enum(*get_pos(p[0]), p[1].getstr(), p[3])
+    Enum(*get_pos(p[0]), p[1].value, p[3])
 )
 enum_def = pg.production('enum_def : Id = expr')(lambda p:
-    EnumDefinition(*get_pos(p[0]), p[0].getstr(), p[2])
+    EnumDefinition(*get_pos(p[0]), p[0].value, p[2])
 )
 struct = pg.production('stmt : Struct Id { struct_defs }')(lambda p:
-    Struct(*get_pos(p[0]), p[1].getstr(), p[3])
+    Struct(*get_pos(p[0]), p[1].value, p[3])
 )
 struct_def = pg.production('struct_def : Id Id')(lambda p:
-    StructDefinition(*get_pos(p[0]), p[1].getstr(), p[0].getstr())
+    StructDefinition(*get_pos(p[0]), p[1].value, p[0].value)
 )
 
 @pg.production('struct_defs : struct_def')
@@ -154,10 +164,19 @@ def body(p) -> Body:
 @pg.production('import_list : String')
 @pg.production('import_list : import_list , String')
 def import_list(p) -> list:
-    return [p[0].getstr()] if len(p) == 1 else p[0] + [p[2].getstr()]
+    return [p[0].value] if len(p) == 1 else p[0] + [p[2].value]
 
 
-arg = pg.production('arg : expr')(lambda p: Arg(*get_pos(p[0]), p[0]))
+@pg.production('elseif_chain : Else If expr body')
+@pg.production('elseif_chain : elseif_chain Else If expr body')
+def elseif_chain(p) -> list:
+    return [(p[2], p[3])] if len(p) == 4 else p[0] + [(p[3], p[4])]
+
+
+@pg.production('arg : expr')
+@pg.production('arg : Id : expr')
+def arg(p):
+    return Arg(*get_pos(p[0]), p[0] if len(p) == 1 else p[2], p[0].value if len(p) == 3 else None)
 
 
 @pg.production('args : arg')
@@ -167,10 +186,10 @@ def args(p) -> Args:
 
 
 param = pg.production('param : Id')(lambda p:
-    Param(*get_pos(p[0]), p[0].getstr(), 'any', None)
+    Param(*get_pos(p[0]), p[0].value, 'any', None)
 )
 annotated_param = pg.production('param : Id Id')(lambda p:
-    Param(*get_pos(p[0]), p[1].getstr(), p[0].getstr(), None)
+    Param(*get_pos(p[0]), p[1].value, p[0].value, None)
 )
 
 
@@ -179,8 +198,8 @@ annotated_param = pg.production('param : Id Id')(lambda p:
 def default_param(p) -> Param:
     return Param(
         *get_pos(p[0]),
-        p[1].getstr(),
-        p[0].getstr() if len(p) == 4 else 'any',
+        p[1].value,
+        p[0].value if len(p) == 4 else 'any',
         p[3] if len(p) == 4 else None
     )
 
@@ -202,7 +221,7 @@ def attr(p) -> Attribute:
     return Attribute(
         *get_pos(p[0]),
         p[0],
-        f'_{p[2].getstr()}', # f'_{p[2].getstr()}' if len(p) == 3 else f'_{p[3].getstr()}',
+        f'_{p[2].value}', # f'_{p[2].value}' if len(p) == 3 else f'_{p[3].value}',
         False # len(p) == 4
     )
 
@@ -216,8 +235,8 @@ def attr(p) -> Attribute:
 @pg.production('expr : Regex')
 @pg.production('expr : Id')
 def literal(p):
-    t = p[0].gettokentype()
-    v = p[0].getstr()
+    t = p[0].name
+    v = p[0].value
 
     pos = get_pos(p[0])
 
@@ -253,28 +272,19 @@ def dictionary(p) -> Dictionary:
 @pg.production('expr : expr * expr')
 @pg.production('expr : expr / expr')
 @pg.production('expr : expr % expr')
-def binary_op(p) -> BinaryOp:
-    return BinaryOp(*get_pos(p[0]), p[1].gettokentype(), p[0], p[2])
-
 @pg.production('expr : expr == expr')
 @pg.production('expr : expr != expr')
-def equality_op(p) -> BinaryOp:
-    return BinaryOp(*get_pos(p[0]), p[1].gettokentype(), p[0], p[2])
-
 @pg.production('expr : expr < expr')
 @pg.production('expr : expr > expr')
 @pg.production('expr : expr <= expr')
 @pg.production('expr : expr >= expr')
-def relational_op(p) -> BinaryOp:
-    return BinaryOp(*get_pos(p[0]), p[1].gettokentype(), p[0], p[2])
-
 @pg.production('expr : expr AND expr')
 @pg.production('expr : expr OR expr')
 def logical_op(p) -> BinaryOp:
-    return BinaryOp(*get_pos(p[0]), p[1].gettokentype(), p[0], p[2])
+    return BinaryOp(*get_pos(p[0]), p[1].name, p[0], p[2])
 
 unary_op = pg.production('expr : ! expr')(lambda p:
-    UnaryOp(*get_pos(p[0]), p[0].gettokentype(), p[1])
+    UnaryOp(*get_pos(p[0]), p[0].name, p[1])
 )
 
 @pg.production('expr : expr ( )')
@@ -294,13 +304,15 @@ def new(p) -> New:
     return New(*get_pos(p[0]), p[1], p[3] if len(p) == 5 else [])
 
 array_comp = pg.production('expr : { expr : Id In expr }')(lambda p:
-    ArrayComp(*get_pos(p[0]), p[1], p[3].getstr(), p[5])
+    ArrayComp(*get_pos(p[0]), p[1], p[3].value, p[5])
 )
 
 
+parser = pg.build()
+
 def parse(tokens: LexerStream) -> Code:
     try:
-        return pg.build().parse(tokens)
+        return parser.parse(tokens)
     except ParsingError as e:
         return parsing_error(e, tokens)
     except LexingError as e:

@@ -1,8 +1,24 @@
 import "ui"
 
-window = ui.create_window()
+func cmd() {
+    print("Clicked")
+}
 
-label = ui.create_label(window)
+font = ui.font('Arial', 25)
+window = ui.window()
+
+label = ui.label(window, text: 'Hello!')
 window.add_widget(label)
+
+btn = ui.button(
+    window,
+    corner_radius: 25,
+    font: font,
+    fg: '#303030',
+    hover_fg: '#262626',
+    text: 'Click me!',
+    on_click: cmd
+)
+window.add_widget(btn)
 
 window.run()

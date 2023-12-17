@@ -1,4 +1,5 @@
-from time import perf_counter, sleep, ctime
+from time import perf_counter, sleep, ctime, time as timef
+from sched import scheduler
 
 from sapling.objects import Func, Array, Float, String, Nil, Int
 from sapling.std.call_decorator import call_decorator
@@ -16,6 +17,14 @@ class time:
     def _pause(self, seconds: Int | Float) -> Nil:
         sleep(seconds.value)
         return Nil(seconds.line, seconds.column)
+
+    @call_decorator({'delay_seconds': {'type': 'int'}, 'func': {'type': 'func'},
+                     'args': {'type': 'array', 'default': (Array, [])}})
+    def _schedule_func(self, vm, delay: Int, func: Func, args: Array):
+        s = scheduler(timef, sleep)
+        s.enter(delay.value, 1, lambda: func(vm, args.value))
+        s.run()
+        return Nil(func.line, func.column)
     
     @call_decorator({
         'func': {'type': 'func'},
